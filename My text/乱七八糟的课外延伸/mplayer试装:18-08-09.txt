@@ -1,0 +1,80 @@
+1.mplayer的安装
+
+· 使用编译的方法安装mplayer很不方便,可以使用nux-desktop
+
+
+
+	１.首先安装第三方库　　nux-desktop
+	# rpm -Uvh http://li.nux.ro/download/nux/dextop/el7/x86_64/nux-dextop-release-0-1.el7.nux.noarch.rpm
+	
+	2.现在验证Nux Dextop仓库是否已经成功安装：
+
+	#yum repolist
+	
+	3.据作者所说，目前已知Nux Dextop会与其他第三方库比如Repoforge和ATrpms相冲突。因此，如果你启用了除了EPEL的其他第三方库，强烈建议你将Nux Dextop仓库设置成“default off”（默认关闭）状态。就是用文本编辑器打开/etc/yum.repos.d/nux-dextop.repo，并且在nux-desktop下面将"enabled=1" 改成 "enabled=0"。
+
+	# vi /etc/yum.repos.d/nux-dextop.repo
+
+	4.安装
+	# yum --enablerepo=nux-dextop install gnome-mplayer
+	
+	
+	
+· 编译安装
+  1. 先决条件：安装MPlayer需要编译器：gcc ,yasm,alsa. 其中安装yasm 需要EPEL repo, 如果不安装alsa声音会缺失。
+
+        rpm -ivh http://dl.fedoraproject.org/pub/epel/7/x86_64/e/epel-release-7-5.noarch.rpm
+
+        yum  install gcc
+
+        yum install yasm
+
+       yum install -y *alsa*   
+
+  2. 下载mplayer源代码：
+
+       mkdir mplayer
+       cd mplayer
+       svn checkout svn://svn.mplayerhq.hu/mplayer/trunk mplayer
+
+	3.  下载解码包，然后复制解码包到 /usr/local/lib/codecs
+
+       wget http://www.mplayerhq.hu/MPlayer/releases/codecs/essential-amd64-20071007.tar.bz2
+
+       tar -xaf essential-amd64-20071007.tar.bz2
+       sudo mkdir /usr/local/lib/codecs
+       sudo cp essential-amd64-20071007/* /usr/local/lib/codecs
+
+	4. 配置，编译mplayer
+      进入mplayer的目录，执行configure
+      ./configure  --codecsdir=/usr/local/lib/codecs
+
+      配置完成后，开始编译：
+       make
+
+       安装 mplayer
+       make install
+
+	5. 测试环境：
+
+ 使用命令行看视频
+ mplayer   viedo/test.rmvb
+ 
+
+2.搭建网络yum源
+
+
+  1.备份
+
+	2.阿里云
+		CentOS 7
+		wget -O /etc/yum.repos.d/CentOS-Base.repo http://mirrors.aliyun.com/repo/Centos-7.repo
+
+	3.163
+		CentOS 7
+		wget -O /etc/yum.repos.d/CentOS7-Base-163.repo http://mirrors.163.com/.help/CentOS7-Base-163.repo
+		
+	4.将原本的repo文件丢进repos目录防止Yum冲突
+
+
+

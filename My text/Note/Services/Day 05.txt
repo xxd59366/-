@@ -1,0 +1,280 @@
+Day 05 rsync同步操作 inotify实时同步 Cobbler装机平台
+
+环境准备:
+·检查Yum是否可用
+
+虚拟机A:
+# yum clean all		//清空Yum缓存
+# yum repolist		
+
+虚拟机B:同上
+
+#####################################################
+
+一.rsync同步操作
+
+1.命令用法
+  - rsync [选项...] 源目录 目标目录
+· 同步与复制的差异
+  - 复制:完全拷贝源到目标
+  - 同步:增量拷贝,只传输变化过的数据
+· 同步控制
+  - rsync操作选项
+-n:测试同步过程,不做实际修改
+--delete:删除目标文件夹内多余的文档
+-a:归档模式,相当于-rlptgoD
+-v:显示详细操作信息
+-z:传输过程中启用压缩/解压
+
+############################################
+
+· 虚拟机svr7本机同步
+# mkdir /nsd /test
+# cp /etc/passwd /nsd/
+# touch /nsd/1.txt
+# rsync -avz /nsd/ /test/
+sending incremental file list
+./
+1.txt
+passwd
+
+sent 995 bytes  received 53 bytes  2096.00 bytes/sec
+total size is 2201  speedup is 2.10
+
+# touch /nsd/2.txt
+# rsync -avz /nsd/ /test/
+sending incremental file list
+./
+2.txt
+
+sent 112 bytes  received 34 bytes  292.00 bytes/sec
+total size is 2201  speedup is 15.08
+
+# rsync -avz --delete /nsd/ /test/  //同步并删除目标多余文档
+
+#####################################################
+
+· rsync+SSH远程同步
+  与远程的SSH目录保持同步,格式类似scp
+  - 下行:rsync [...] user@host:远程目录 本地目录
+  - 上行:rsync [...] 本地目录 user@host:远程目录
+
+虚拟机A
+# rsync -avz --delete /opt/ root@192.168.4.207:/opt/
+
+虚拟机B
+# ls /opt
+
+虚拟机A
+# touch /opt/{1..5}.txt
+# rsync -avz --delete /opt/ root@192.168.4.207:/opt/
+
+虚拟机B
+# ls /opt
+
+二.inotify实时同步
+1.实时远程同步
+  · 无密码验证
+  a)生成公钥和私钥
+  # ssh-keygen			//一路回车
+  /root/.ssh/known_hosts	//记录ssh远程客户端标识文件
+   ·公钥
+   ·私钥
+  b)传递公钥到指定机器
+  # ssh-copy-id root@192.168.4.207
+  
+  c)测试免验证登录
+  # rsync -avz --delete /opt/ root@192.168.4.207:/opt/
+  
+2.目录内容监控
+  a)安装inotify-tools控制工具可调用此机制实现监控
+    · 标准的源码,编译安装
+      rpm包:yum,rpm -ivh
+      源码包:
+      · 安装流程
+      源码包 --> 开发工具(gcc与make) --> 可执行的程序 --> 运行安装
+
+####################################################################
+
+虚拟机svr7:
+1.安装gcc与make
+  # yum -y install gcc make
+
+2.tar进行解包
+  # tar -xf /root/xxd/tools/inotify-tools-3.13.tar.gz -C /
+  # ls /
+  # cd /inotify-tools-3.13
+  # ls
+3.'./configure'配置,指定安装目录/功能模块等选项
+    检测系统是否安装gcc
+    --prefix=路径		#指定安装目录
+  # cd /inotify-tools-3.13
+  # ./configure
+4.make编译,生成可执行的二进制程序文件
+  # cd /inotify-tools-3.13
+  # make
+
+5.make install 安装,将编译好的文件复制到安装目录
+  # make install
+  # which inotifywait		//查看是否具备该程序
+
+####################################################################
+
+      · 主要优点
+        - 获得软件的最新版,及时修复bug
+	- 软件功能可按需选择/定制,有更多软件可供选择
+	- 源码包适用各种平台
+
+====================================================================
+
+
+三.Cobbler装机平台
+1.环境准备
+
+  ·安装CentOS 7虚拟机:
+   1.图形方式进行安装
+   2.内存2G
+   3.磁盘大小:至少50G以上
+   4.网络类型private1
+   5.分区选择自动分区
+   6.软件包选择"带GUI的服务器"
+   7.设置root密码 创建普通用户lisi
+   8.将CentOS放入光驱设备,搭建本地Yum仓库
+   9.配置IP地址:192.168.4.168/24
+   10.配置主机名:Cobbler.tedu.cn
+   11.设置防火墙默认区域为trusted
+   12.当前及永久设置SELinux状态为Disabled
+   13.利用scp将真机的Cobbler.zip包传到虚拟机192.168.4.168的/root/目录下
+
+2.基本用法
+  ·inotifywait [选项] 目标文件夹
+  
+  ·常用命令选项
+    -m,持续监控(捕获一个事件后不退出)
+    -r,递归监控,包括子目录及文件
+    -q,减少屏幕输出信息
+    -e,指定监视的midify,move,create,delete,attrib等事件类别
+
+3.书写Shell脚本
+  循环:for循环:适合次数固定的事件
+       while循环:适合死循环的事件
+    while [条件]
+    do
+      循环执行语句
+    done
+# vim /root/rsync.sh
+
+#!/bin/bash
+while inotifywait -rqq /opt/
+ do
+   rsync -az --delete /opt/ root@192.168.4.207:/opt/
+ done &
+
+# chmod +x /root/rsync.sh
+
+4.搭建Cobbler装机平台
+  Cobbler概述软件,管理dhcp,tftp,web服务
+  自由地导入镜像与ks应答文件
+
+  1)解压Cobbler.zip包
+  # unzip /root/Cobbler.zip -d /
+  # cd /Cobbler/
+  # ls
+
+  # unzip /Cobbler/cobbler.zip -d /opt
+  # ls /opt/cobbler
+
+5.Cobbler简介
+  · 基本概念
+   -Cobbler是一款快速的网络系统部署工具
+   -集中管理所需服务,如DHCP,DNS,TFTP,Web
+   -Cobbler内部集成了一个镜像版本仓库
+   -Cobbler内部集成了一个ks应答文件仓库
+   -Cobbler还提供了包括yum源管理,Web界面管理,API接口,电源管理功能
+  
+####################################################################
+
+一.安装cobbler主程序,工具包等
+
+# yum -y install /opt/cobbler/*.rpm
+
+1.安装软件 cobbler cobbler-web dhcp tftp-server pykickstart httpd
+  
+  cobbler					#cobbler程序包
+  cobbler-web				#cobbler的web服务包
+  pykickstart				#cobbler检查kickstart语法错误
+  httpd					#Apache web服务
+  dhcp					#dhcp服务
+  tftp-server				#tftp服务
+
+2.配置cobbler
+# vim /etc/cobbler/settings
+
+  next_server: 192.168.4.168		#设置下一个服务器还为本机
+  server: 192.168.4.168			#设置本机为cobbler服务器
+  manage_dhcp: 1			#设置cobbler管理dhcp服务
+  pxe_just_once: 1			#防止客户端重复安装操作系统
+
+  开机启动:匹配即停止
+  1.硬盘启动  2.光驱设备  3.U盘  4.网络引导
+  1.网络引导  2.光驱设备  3.U盘  4.硬盘启动
+
+3.配置cobbler的dhcp
+# vim /etc/cobbler/dhcp.template
+末行模式输入,将192.168.1默认网段改为192.168.4网段
+
+:%s/192.168.1/192.168.4/g
+5 次替换，共 4 行
+
+4.绝对路径解压cobbler_boot.tar.gz		#众多的引导文件
+
+# tar -tf /Cobbler/cobbler_boot.tar.gz		#查看包里内容
+# tar -xPf /Cobbler/cobbler_boot.tar.gz		#绝对路径释放
+
+# ls /var/lib/cobbler/loaders/
+
+5.启动相关服务
+
+# systemctl restart cobblerd
+# systemctl enable cobblerd
+
+# systemctl restart httpd
+# systemctl enable httpd
+
+# systemctl restart tftp
+# systemctl enable tftp
+
+# systemctl restart rsyncd		#同步服务
+# systemctl enable rsyncd
+
+6.同步刷新cobbler配置
+# cobbler sync
+...
+*** TASK COMPLETE ***
+
+# firefox https://192.168.4.168/cobbler_web
+用户名:cobbler
+密码:cobbler
+
+7.Cobbler应用
+
+cobbler import --path=挂载点 --name=导入系统命名(随意起)导入镜像安装
+
+###########################################################
+
+自定义应答文件:开头注释行删除
+
+[root@cobbler ~]# system-config-kickstart  #生成ks文件
+
+必须默认kickstart文件存放位置：/var/lib/cobbler/kickstarts/
+
+[root@cobbler ~]# cobbler list
+
+修改kickstart文件：
+[root@cobbler ~]# cobbler profile edit --name=CentOS7.4-A  --kickstart=/var/lib/cobbler/kickstarts/自定义.cfg
+
+[root@cobbler ~]# cobbler profile report
+
+[root@cobbler ~]# cobbler sync  #同步配置
+
+

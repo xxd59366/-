@@ -1,0 +1,11 @@
+LINUX7版本破解密码：
+重启电脑，进入grub2引导界面时，按e键进入编辑状态
+找到linux16所在的行，在这一行的末尾输入rd.break console=tty0，然后按ctrl+x快捷键进入救援模式
+在命令行输入：
+mount -o remount,rw /sysroot       #以读写的方式挂载
+chroot /sysroot                     #切换根目录
+passwd root                         #修改密码
+连续输入两次密码
+touch /.autorelabel                  #重置安全标签
+exit                                 #退出
+reboot                               #重启

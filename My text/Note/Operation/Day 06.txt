@@ -1,0 +1,265 @@
+Day 06 版本控制 SVN基础 实战案例 、 RPM打包 
+
+一.Subversion基本操作(SVN)
+
+1.什么是Subversion
+· Subversion是一个自由/开源的版本控制系统
+	- 在SVN管理下,文件和目录可以超越时空
+	- SVN允许你数据回复到早期版本或者检查数据修改的历史
+	- 允许你和别人协作文档并跟踪所做的修改
+	
+运维工作中:
+shell代码,配置文件等同步
+
+2.Repository--仓库(repo)
+· 客户端
+	- 命令行
+	- 图形
+· 通信方式
+	- 本地访问
+	- SVN服务器
+	- Web服务
+· 版本库
+	- 版本库是版本控制的核心
+	- 任意数量客户端
+	- 客户端通过写数据库分享代码
+· SVN特点
+	- 记录每一次改变
+	
+3.安装SVN服务器
+1)yum安装
+# yum -y install subversion
+
+2)创建版本库
+# mkdir /var/svn
+# svnadmin create /var/svn/project
+# ls /var/svn/project/
+conf/  db/  format  hooks/  locks/  README.txt
+
+3)本地导入初始化数据
+# cd /usr/lib/systemd/system
+$svn import . file:///var/svn/project/ -m "Init Data"
+
+4)修改配置文件,创建账户和密码
+
+# vim /var/svn/project/conf/svnserve.conf
+· 注: 后面的几行前面不能有空格
+//19行,匿名权限
+anon-access = none
+//20行,有效账户可写
+auth-access = write
+//27行,密码文件
+password-db = passwd
+//34行,ACL访问控制列表
+authz-db = authz
+
+# vim /var/svn/project/conf/passwd
+.. ..
+[users]
+//用户名和密码
+harry = 123456
+tom = 123456
+
+# cat /var/svn/project/conf/authz
+//定义ACL访问控制
+[/]
+harry = rw                     用户对项目根路径可读可写
+tom = rw
+
+5)启动服务
+# svnserve -d  -r /var/svn/project
+# netstat -ntulp | grep svnserve
+tcp        0      0 0.0.0.0:3690    0.0.0.0:*    LISTEN      4043/svnserve
+备注：启动服务也可以使用svnserve -d启动，但客户端访问时需要指定绝对路径（svn://服务器IP/var/svn/project）
+
+4.客户端测试(192.168.2.200)
+1)将服务器上的代码下载到本地
+# cd /tmp
+# svn --username harry --password 123456 \
+co svn://192.168.2.100/ code
+//建立本地副本,从服务器192.168.2.100上co下载代码到本地code目录
+//用户名harry,密码123456
+
+# cd /tmp/code
+# ls
+# vim user.slice                               //挑选任意文件修改内容
+# svn ci -m "modify user"                      //将本地修改的数据同步到服务器
+
+# svn update                                   //将服务器上新的数据同步到本地
+# svn info svn://192.168.2.100                 //查看版本仓库基本信息
+# svn log svn://192.168.2.100                  //查看版本仓库的日志
+
+# echo "test" > test.sh                        //本地新建一个文件
+# svn ci -m "new file"                         //提交失败,该文件不被svn管理
+# svn add test.sh                              //将文件或目录加入版本控制
+# svn ci -m "new file"                         //再次提交,成功
+
+# svn mkdir subdir                             //创建子目录
+# svn rm timers.target                         //使用svn删除文件
+# svn ci -m "xxx"                              //提交一次代码
+# svn mkdir
+
+# vim umount.target                            //任意修改本地的一个文件
+# svn diff                                     //查看所有文件的差异
+# svn diff umount.target                       //仅查看某一个文件的差异
+# svn cat svn://192.168.2.100/reboot.target    //查看服务器文件的内容
+
+//删除文件所有内容,但未提交
+# sed -i 'd' tmp.mount
+//还原tmp.mount文件
+# svn revert tmp.mount
+
+//任意删除若干文件
+# rm -rf *.target
+//还原
+# svn update
+
+//修改本地副本中的代码文件
+# sed -i '1a #test###' tuned.service
+//提交代码
+# svn ci  -m  "xxx"
+//将文件从版本7还原到版本2
+# svn merge -r7:2    tuned.service    
+
+
+二.使用Subversion协同工作
+1.多人协同工作
+web1:
+# cd /tmp
+# svn --username tom --password 123456 \
+> co svn://192.168.2.100/ code
+web2:
+# cd /tmp
+# svn --username harry --password 123456 \
+> co svn://192.168.2.100/ code
+
+1)harry和tom修改不同的文件
+[root@web1 mycode]# sed -i "3a ###harry modify#####"  tmp.mount
+[root@web1 mycode]# svn ci -m  "has modified"
+[root@web2 mycode]# sed -i "3a ###tom modify#####"  umount.target
+[root@web2 mycode]# svn ci -m "has modified"
+[root@web2 mycode]# svn update
+[root@web1 mycode]# svn update
+
+2)harry和tom修改相同文件的不同行
+[root@srv5 ~]# cd harry
+[root@web1 mycode]# sed -i "3a ###harry modify#####" user.slice
+[root@web1 mycode]# svn ci -m  "modified"
+[root@web2 mycode]# sed -i "6a ###tom  modify#####"  user.slice
+[root@web2 mycode]# svn ci -m "modified"        //提交失败
+Sending        svnserve
+Transmitting file data .svn: Commit failed (details follow):
+svn: File '/user.slice' is out of date（过期）
+[root@web2 mycode]# svn update                    //提示失败后，先更新再提交即可
+[root@web2 mycode]# svn ci -m "modified"        //提交成功
+Sending        user.slice
+Transmitting file data .
+
+3)harry和tom修改相同文件的相同行
+[root@web1 mycode]# sed  -i  '1c [UNIT]' tuned.service
+[root@web1 mycode]# svn ci -m "modified"
+[root@web2 mycode]# sed  -i  '1c [unit]' tuned.service
+[root@web2 mycode]# svn ci -m "modified"
+Sending        tuned.service
+Transmitting file data .svn: Commit failed (details follow):
+svn: File '/tuned.service' is out of date(过期)
+[root@web2 mycode]# svn update                    //出现冲突，需要解决
+Conflict discovered in 'tuned.service'.
+Select: (p) postpone, (df) diff-full, (e) edit,
+        (mc) mine-conflict, (tc) theirs-conflict,
+        (s) show all options:p                    //选择先标记p，随后解决
+[root@web2 mycode]# ls
+tuned.service   tuned.service.mine        tuned.service.r10    tuned.service.r9
+[root@web2 mycode]# mv tuned.service.mine tuned.service
+[root@web2 mycode]# rm  -rf  tuned.service.r10 tuned.service.r9
+[root@web2 mycode]# svn ci -m "modified"    //解决冲突
+
+2.使用dump指令备份版本库数据
+
+# svnadmin dump /var/svn/project > project.bak  //备份
+* Dumped revision 0.
+* Dumped revision 1.
+* Dumped revision 2.
+* Dumped revision 3.
+* Dumped revision 4.
+* Dumped revision 5.
+* Dumped revision 6.
+* Dumped revision 7.
+* Dumped revision 8.
+* Dumped revision 9.
+* Dumped revision 10.
+* Dumped revision 11.
+# svnadmin create /var/svn/project2                  //新建空仓库
+# svnadmin load /var/svn/project2 < project.bak      //还原
+
+
+三.制作nginx的RPM包
+· 什么是RPM--本质上是压缩包
+· 制作RPM包
+1.安装rpm-build软件包
+# yum -y install rpm-build
+· 生成rpmbuild目录结构
+# rpmbuild -ba nginx.spec                      //会报错,没有文件或目录
+# ls /root/rpmbuild                            //自动生成的目录结构
+BUILD  BUILDROOT  RPMS  SOURCES  SPECS  SRPMS
+//准备工作,将源码复制到SOURCES目录
+# cp nginx-1.12.2.tar.gz /root/rpmbuild/SOURCES/
+//创建并修改SPEC配置文件
+# vim /root/rpmbuild/SPECS/nginx.spec
+
+Name:nginx        
+Version:1.12.2
+Release:    10
+Summary: Nginx is a web server software.
+    
+License:GPL    
+URL:    www.test.com    
+Source0:nginx-1.12.2.tar.gz
+
+#BuildRequires:    
+#Requires: 
+   
+%description
+nginx [engine x] is an HTTP and reverse proxy server.
+
+%prep
+%setup –q                            //自动解压源码包，并cd进入目录
+
+%build
+./configure
+make %{?_smp_mflags}
+
+%install
+make install DESTDIR=%{buildroot}
+
+cp /root/rpmbuild/SPECS/nginx.sh %{buildroot}/usr/local/nginx/    
+##注意，cp非必须操作，注意，这里是将一个脚本拷贝到安装目录，必须提前准备该文件
+
+%files
+%doc
+/usr/local/nginx/*            //对哪些文件与目录打包
+
+%changelog
+
+2.rombuild创建RPM软件包
+# rpmbuild -ba /root/rpmbuild/SPECS/nginx.spec
+# ls /root/rpmbuild/RPMS/x86_64/nginx-1.12.2-10.x86_64.rpm
+# rpm -qpi RPMS/x86_64/nginx-1.12.2-10.x86_64.rpm
+# rpm -ivh RPMS/x86_64/nginx-1.12.2-10.x86_64.rpm 
+# rpm -qa |grep nginx
+# /usr/local/nginx/sbin/nginx
+# curl http://127.0.0.1/
+
+三.git的使用
+git
+git clone
+git add
+git commit -m "xx"
+gitp push
+
+在本机上同步git
+git clone git clone https://github.com/redhatedu/course
+cd course
+git pull
+
+    

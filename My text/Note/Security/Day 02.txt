@@ -1,0 +1,284 @@
+Day 02 加密与解密 AIDE入侵检测系统 扫描与抓包
+
+一.加密与解密
+
+· 加/解密概述
+
+  1.信息传递中的风险
+  · 电脑黑客
+  · 出差人员
+  · 离职人员
+  · 合作伙伴
+  · 商业间谍
+  · 高管习惯
+  · 开发人员
+  · 流程失控
+  2.什么是加密/解密
+  · 发送方 : 明文 -> 密文
+  · 接收方 : 密文 -> 明文
+  3.加密目的及方式
+  · 确保数据的机密性
+    - 对称加密:加密/解密用同一个密钥
+    - 非对称加密:加密/解密用不同密钥
+  · 保护信息的完整性
+    - 信息摘要:基于输入的信息生成长度较短,数位固定的散列值
+  4.常见的加密算法
+  · 对称加密
+    - DES
+    - AES
+  · 非对称加密
+    - RSA
+    - DSA
+  · Hash散列技术,用于信息摘要
+    - MD5
+    - SHA(256/512)
+  5.MD5完整性教研
+  · 使用md5sum校验工具
+    - 生成MD5校验值
+    - 与软件官方提供的校验值比对
+    
+    vimdiff a b 比对a,b两个文件
+    
+· GPG加/解密工具
+  
+  1.使用GPG对称加密方式保护文件
+    1) 确保已经安装了相关软件（默认已经安装好了）
+     # yum -y install gnupg2            //安装软件
+     # gpg --version                    //查看版本
+     gpg (GnuPG) 2.0.22
+   2) gpg使用对称加密算法加密数据的操作
+     # echo 233 > 1.txt             //创建1.txt
+     # gpg -c 1.txt                 //对称加密
+     # cat 1.txt.gpg                //显示为乱码
+     �ʐik���������n-r6X�E@��2��MJ9C�L����
+    3) 使用gpg对加密文件进行解密操作 
+     # gpg -d 1.txt                 //对称解密
+     # gpg -d 1.txt.gpg | cat
+     gpg: 钥匙环‘/root/.gnupg/secring.gpg’已建立
+     gpg: CAST5 加密过的数据
+     gpg: 以 1 个密码加密
+     gpg: 警告：报文未受到完整的保护
+       233
+  2.使用GPG非对称加密方式保护文件
+    非对称加密/解密文件时，UserA（192.168.4.100）生成私钥与公钥，并把公钥发送给UserB（192.168.4.5），UserB使用公钥加密数据，并把加密后的数据传给UserA，UserA最后使用自己的私钥解密数据
+    1) 接收方UserA创建自己的公钥,私钥对(192.168.4.100)
+     # gpg --gen-key                           //创建密钥对
+     请选择您要使用的密钥种类：
+         (1) RSA and RSA (default)
+         (2) DSA and Elgamal
+         (3) DSA (仅用于签名)
+         (4) RSA (仅用于签名)
+      您的选择？ 
+      RSA 密钥长度应在 1024 位与 4096 位之间。
+      您想要用多大的密钥尺寸？(2048)
+      您所要求的密钥尺寸是 2048 位
+      请设定这把密钥的有效期限。
+               0 = 密钥永不过期
+            <n>  = 密钥在 n 天后过期
+            <n>w = 密钥在 n 周后过期
+            <n>m = 密钥在 n 月后过期
+            <n>y = 密钥在 n 年后过期
+      密钥的有效期限是？(0) 
+      密钥永远不会过期
+      以上正确吗？(y/n)y
+
+      You need a user ID to identify your key; the software constructs the user ID
+      from the Real Name, Comment and Email Address in this form:
+          "Heinrich Heine (Der Dichter) <heinrichh@duesseldorf.de>"
+
+      真实姓名：tommy
+      电子邮件地址：tom@163.com
+      注释：abc
+      您选定了这个用户标识：
+          “tommy (abc) <tom@163.com>”
+
+      更改姓名(N)、注释(C)、电子邮件地址(E)或确定(O)/退出(Q)？o
+      您需要一个密码来保护您的私钥。
+
+      您不想要有密码――这个想法实在是遭透了！
+      不过，我仍然会照您想的去做。您任何时候都可以变更您的密码，仅需要
+      再次执行这个程序，并且使用“--edit-key”选项即可。
+
+      我们需要生成大量的随机字节。这个时候您可以多做些琐事(像是敲打键盘、移动
+      鼠标、读写硬盘之类的)，这会让随机数字发生器有更好的机会获得足够的熵数。
+      我们需要生成大量的随机字节。这个时候您可以多做些琐事(像是敲打键盘、移动
+      鼠标、读写硬盘之类的)，这会让随机数字发生器有更好的机会获得足够的熵数。
+      gpg: 密钥 C600BC96 被标记为绝对信任
+      公钥和私钥已经生成并经签名。
+
+      gpg: 正在检查信任度数据库
+      gpg: 需要 3 份勉强信任和 1 份完全信任，PGP 信任模型
+      gpg: 深度：0 有效性：  1 已签名：  0 信任度：0-，0q，0n，0m，0f，1u
+      pub   2048R/C600BC96 2018-08-30
+      密钥指纹 = 9E41 785B BBF8 3558 E71C  D197 DA72 E794 C600 BC96
+      uid                  tommy (abc) <tom@163.com>
+      sub   2048R/3EF61A55 2018-08-30
+      
+   2) UserA导出自己的公钥文件
+    · 用户的公钥,私钥信息分别保存在pubring.gpg和secring.gpg文件内
+    · 使用gpg命令结合--export选项将其中的公钥文本导出
+     # gpg -a --export UserA > UserA.pub              //--export的作用是导出密钥，-a的作用是导出的密钥存储为ASCII格式
+     # scp UserA.pub 192.168.4.5:/tmp/                //将密钥传给Proxy
+    
+    3) UserB使用公钥加密数据，并把加密后的数据传给UserA（在192.168.4.5操作）
+     # echo "I love you ." > love.txt
+     # gpg -e -r UserA love.txt
+       无论如何还是使用这把密钥吗？(y/N)y                          //确认使用此密钥加密文件
+     //-e选项是使用密钥加密数据
+     //-r选项后面跟的是密钥，说明使用哪个密钥对文件加密
+     # scp love.txt.gpg  192.168.4.100:/root                //加密的数据传给UserA
+     
+   4) UserA以自己的私钥解密文件（在192.168.4.100操作）
+     # gpg -d love.txt.gpg > love.txt
+      您需要输入密码，才能解开这个用户的私钥：“UserA (UserA) <UserA@tarena.com>”
+      2048 位的 RSA 密钥，钥匙号 9FA3AD25，建立于 2017-08-16 (主钥匙号 421C9354)
+                                                      //验证私钥口令
+     gpg: 由 2048 位的 RSA 密钥加密，钥匙号为 9FA3AD25、生成于 2017-08-16
+          “UserA (UserA) <UserA@tarena.com>”
+     # cat love.txt                      //获得解密后的文件内容
+     I love you.
+  
+  3.使用GPG的签名机制，检查数据来源的正确性
+    1) 在client(192.168.4.100)上，UserA为软件包创建分离式签名
+     # tar zcf log.tar /var/log              //建立测试软件包
+     # gpg -b log.tar                      //创建分离式数字签名
+     # ls -lh log.tar*
+     -rw-rw-r--. 1 root root 170 8月  17 21:18 log.tar
+     -rw-rw-r--. 1 root root 287 8月  17 21:22 log.tar.sig
+     # scp log.tar* 192.168.4.5:/root        //将签名文件与签名传给UserB
+    
+    2) 在192.168.4.5上验证签名
+     # gpg --verify log.tar.sig log.tar
+     gpg:于2028年06月07日 星期六 23时23分23秒 CST 创建的签名，使用 RSA，钥匙号 421C9354
+     gpg: 完好的签名，来自于“UserA (UserA) <UserA@tarena.com>”
+      .. ..
+      
+二.使用AIDE做入侵检测
+· 初始化系统
+  1.安装软件包
+   # yum -y install aide
+  2.修改配置文件
+   # vim /etc/aide.conf
+    @@define DBDIR /var/lib/aide                            //数据库目录
+    @@define LOGDIR /var/log/aide                            //日志目录
+    database_out=file:@@{DBDIR}/aide.db.new.gz                //数据库文件名
+    //一下内容为可以检查的项目（权限，用户，组，大小，哈希值等）
+    #p:      permissions
+    #i:      inode:
+    #n:      number of links
+    #u:      user
+    #g:      group
+    #s:      size
+    #md5:    md5 checksum
+    #sha1:   sha1 checksum
+    #sha256:        sha256 checksum
+    DATAONLY =  p+n+u+g+s+acl+selinux+xattrs+sha256
+    //以下内容设置需要对哪些数据进行入侵校验检查
+    //注意：为了校验的效率，这里将所有默认的校验目录与文件都注释
+    //仅保留/root目录，其他目录都注释掉
+    /root   DATAONLY
+    #/boot   NORMAL                                    //对哪些目录进行什么校验
+    #/bin    NORMAL
+    #/sbin   NORMAL
+    #/lib    NORMAL
+    #/lib64  NORMAL
+    #/opt    NORMAL
+    #/usr    NORMAL
+    #!/usr/src                                        //使用[!]，设置不校验的目录
+    #!/usr/tmp
+    
+· 初始化数据库，入侵后检测
+  1.入侵前对数据进行校验，生成初始化数据库
+  [root@proxy ~]# aide --init
+  AIDE, version 0.15.1
+  AIDE database at /var/lib/aide/aide.db.new.gz initialized.
+  //生成校验数据库，数据保存在/var/lib/aide/aide.db.new.gz
+  
+  # mv /var/lib/aide/aide.db.new.gz /var/lib/aide/aide.db.gz
+  //校验时是和不带new的文件进行比对
+  
+  2.备份数据库，将数据库文件拷贝到U盘（非必须的操作）
+  [root@proxy ~]# cp /var/lib/aide/aide.db.new.gz   /media/
+  
+  3.入侵后检测
+  [root@proxy ~]# cd /var/lib/aide/
+  [root@proxy ~]# mv aide.db.new.gz aide.db.gz
+  [root@proxy ~]# aide --check                            //检查哪些数据发生了变化
+  
+三.扫描与抓包分析
+
+· 使用NMAP扫描来获取指定主机/网段的相关信息
+  1.安装软件
+    # yum -y install nmap
+    //基本用法：
+    # nmap  [扫描类型]  [选项]  <扫描目标 ...>
+    //常用的扫描类型
+    // -sS，TCP SYN扫描（半开）
+    // -sT，TCP 连接扫描（全开）
+    // -sU，UDP扫描
+    // -sP，ICMP扫描
+    // -A，目标系统全面分析
+    
+  2.检查192.168.4.100主机是否可以ping通
+    # nmap  -sP  192.168.4.100
+    Starting Nmap 6.40 ( http://nmap.org ) at 2018-06-06 21:59 CST
+    mass_dns: warning: Unable to determine any DNS servers. Reverse DNS is disabled. Try using --system-dns or specify valid servers with --dns-servers
+    Nmap scan report for host3 (192.168.4.100)
+    Host is up (0.00036s latency).
+    MAC Address: 52:54:00:71:07:76 (QEMU Virtual NIC)
+    Nmap done: 1 IP address (1 host up) scanned in 0.02 seconds
+  
+    · 使用-n选项可以不执行DNS解析
+    · 可以批量检查网段(192.168.2.0/24)
+  3.检查目标主机所开启的TCP服务
+    [root@proxy ~]# nmap -sT 192.168.4.100
+     .. ..
+    PORT    STATE SERVICE
+    21/tcp  open  ftp
+    22/tcp  open  ssh
+    25/tcp  open  smtp
+    80/tcp  open  http
+    110/tcp open  pop3
+    111/tcp open  rpcbind
+    143/tcp open  imap
+    443/tcp open  https
+    993/tcp open  imaps
+    995/tcp open  pop3s
+    MAC Address: 00:0C:29:74:BE:21 (VMware)
+    Nmap done: 1 IP address (1 host up) scanned in 0.2 seconds
+     · 检查192.168.4.0/24网段内哪些主机开启了FTP、SSH服务
+    [root@proxy ~]# nmap -p 21-22 192.168.4.0/24
+    [root@proxy ~]# nmap -n -sT -p 22-80 192.168.2.0/24
+     · nmap -sT 全开扫描
+     · nmap -sS 半开扫描
+  4.检查目标主机所开启的UDP服务
+    [root@proxy ~]# nmap   -sU  192.168.4.100                //指定-sU扫描UDP
+    53/udp   open          domain
+    111/udp  open          rpcbind
+  5.全面分析目标主机192.168.4.100和192.168.4.5的操作系统信息
+    [root@proxy ~]# nmap -A 192.168.4.100,5
+
+· 中间人攻击
+  IP地址欺骗
+  MAC地址欺骗
+  IP不同(域名类似)
+  www.icbc.coe[955xx发短信]
+  dhcp(ip,netmask,网关)
+  * 中间人攻击!=抓包
+
+· 使用tcpdump分析FTP访问中的明文交换信息
+  1.准备vsftpd服务器
+   # yum -y install vsftpd
+   # systemctl restart vsftpd
+  2.启用tcpdump命令行抓包
+   # tcpdump
+     //监控选项如下：
+    // -i，指定监控的网络接口（默认监听第一个网卡）
+    // -A，转换为 ACSII 码，以方便阅读
+    // -w，将数据包信息保存到指定文件
+    // -r，从指定文件读取数据包信息
+    //tcpdump的过滤条件：
+    // 类型：host、net、port、portrange
+    // 方向：src、dst
+    // 协议：tcp、udp、ip、wlan、arp、……
+    // 多个条件组合：and、or、not

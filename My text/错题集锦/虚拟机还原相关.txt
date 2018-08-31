@@ -1,0 +1,67 @@
+pc(){
+undef pc
+rmimg rh254-pc-vda.ovl
+rmimg rh254-pc-vdb.ovl
+create rh254-pc-vda.qcow2 rh254-pc-vda.ovl
+create rh254-pc-vdb.qcow2 rh254-pc-vdb.ovl
+virdef pc.xml pc
+virsh start pc
+}
+
+IMG_DIR=/var/lib/libvirt/images/
+
+virdef(){
+virsh define /root/.$1  &> /dev/null
+echo -e "$2 \e[32;1m[OK]\e[0m"
+}
+
+undef(){
+id=`virsh dominfo $1 2> /dev/null | grep running`
+if  [ -n "$id"  ];then
+        /usr/bin/virsh destroy $1 &> /dev/null
+fi
+virsh undefine $1 &>/dev/null
+}
+
+rmimg(){
+if [ -e $IMG_DIR/$1 ]; then
+    rm -rf $IMG_DIR/$1
+
+fi
+}
+
+create(){
+qemu-img create -f qcow2 -b $IMG_DIR/.$1  $IMG_DIR/$2 &> /dev/null
+}
+
+elif [ $2 == 'classroom' ];then
+  case $1 in
+   start)
+   virsh start $2 ;;
+   stop)
+   virsh  shutdown $2 ;;
+   poweroff)
+   virsh destroy $2 ;;
+   status)
+   vm=$2
+   echo2 ;;
+   reset)
+  classroom ;;
+  *)
+   help ;;
+  esac
+
+# ls -A /var/lib/libvirt/images/
+.classroom.xml              .rh254-server-vda.qcow2  .rh7_template.img
+db                          rh254-server-vdb.ovl     .rhel6.xml
+.desktop.xml                .rh254-server-vdb.qcow2  .rhel7.xml
+rh254-classroom-vda.ovl     .rh6_template.img        .server.xml
+.rh254-classroom-vda.qcow2  rh7_node01.img           Student.sh
+rh254-desktop-vda.ovl       rh7_node02-clone.img     .win
+.rh254-desktop-vda.qcow2    rh7_node02.img           .win2008.img
+rh254-desktop-vdb.ovl       rh7_node03.img           .win2008.xml
+.rh254-desktop-vdb.qcow2    rh7_node05-clone.img
+rh254-server-vda.ovl        rh7_node05.img
+
+
+

@@ -1,0 +1,26 @@
+1.sed与awk中的正则需要包括在双斜线中,如:
+
+# sed '/root/d' /etc/passwd                //删除passwd文件中包含'root'字段的行并输出到命令行
+# sed -i '/[0-9]/d' a.txt                  //删除a.txt文件中包含任意数字的行
+
+2.Nginx配置文件中（ ）指令可以定义客户端浏览器缓存数据的时间
+
+# expires 30d可以设置缓存30天
+
+3.在启动memcached时,'-c'用来限制memcached服务的最大连接数
+
+*************************************************************
+4.Varnish支持将缓存数据存储在内存和硬盘中          显存?
+*************************************************************
+
+5.支持java的Web服务器:
+Apache Tomcat
+Redhat Jboss
+IBM Websphere
+Oracle Weblogic
+
+6.客户端访问subvertion版本库的方式:
+· 通过本地访问
+· 通过SVN服务
+· 通过Web服务
+

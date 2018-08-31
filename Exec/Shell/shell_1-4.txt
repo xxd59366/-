@@ -1,0 +1,21 @@
+1.默认shell:
+/etc/passwd下给用户规定的默认shell
+useradd -s 规定
+usermod -s 修改
+
+2.Linux系统预设变量:
+$USER 显示当前用户
+$HOSTNAME 显示主机名
+$BASH 显示当前Shell
+$PATH 显示环境变量路径
+$HISTSIZE 命令日志记录上限
+$MAIL 显示信箱地址
+$HOME 家目录路径
+
+3.
+  1)标准输出和错误输出重定向:
+  &>
+  2)标准定向到黑洞:
+  > /dev/null
+
+4.

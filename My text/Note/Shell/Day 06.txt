@@ -1,0 +1,169 @@
+Day 06 awk工具
+
+一.使用awk提取文本
+
+1.awk工具概述
+· awk编程语言/数据处理引擎
+  - 创造者: Aho,Weinberger,Kernighan
+  - 基于模式匹配检查输入文本,逐行处理并输出
+  - 通常用在Shell脚本中,获取指定的数据
+  - 单独用时,可对文本数据做统计
+  
+2.主要用法
+  - 格式1: 前置命令 | awk [选项] '[条件]{指令}'
+  - 格式2: awk [选项] '[条件]{指令}' 文件
+  
+  其中,print是最常用的编辑指令,若由多条编辑指令,可用分号分隔;
+  Awk过滤数据时仅支持打印某一列;
+  处理文本时,若未指定分隔符,则默认将空格,制表符等作为分隔符;
+  
+awk常用内置变量：
+  $0 文本当前行的全部内容
+  $1	文本的第1列
+  $2	文件的第2列
+  $3	文件的第3列，依此类推
+  NR	文件当前行的行号
+  NF	文件当前行的列数（有几列）
+  
+· /var/log/secure日志文件存放他人对本机的远程记录
+
+  
+例子:
+# cat test01.txt
+hello world
+ni hao ma
+
+# awk '{print $1,$3}' test01.txt 
+hello 
+ni ma
+
+# df -h | awk '{print $4,$6}'
+可用 挂载点
+7.0G /
+
+# awk -F: '{print $1}' /etc/passwd
+root
+.. ..
+
+# awk -F"[:/]" '{print $1,$10}' /etc/passwd
+root bash
+.. ..
+
+# awk '{print $0}' test01.txt 
+hello world
+ni hao ma
+
+# awk '{print NR,NF}' test01.txt 
+1 2
+2 3
+
+# awk '{print $NF}' test01.txt 
+world
+ma
+
+# awk -F: '{print $1"的解释器是:"$7}' /etc/passwd
+root的解释器是:/bin/bash
+.. ..
+
+# ifconfig eth0 | awk '/RX p/{print "入站网卡流量:"$5}'
+入站网卡流量:422209
+
+# df -h | awk '/\/$/{print $4}'
+7.0G
+
+# awk '/[AF][ca][ci]/{print $11}' /var/log/secure 
+172.25.0.250          //成功的
+172.25.0.10            //成功的
+172.25.0.10            //失败的
+
+二.格式化输出
+1.awk处理的时机
+awk会逐行处理文本，支持在处理第一行之前做一些准备工作，以及在处理完最后一行之后做一些总结性质的工作。
+
+awk [选项] '[条件]{指令}' 文件
+awk [选项] 'BEGIN{指令}{指令}END{指令}'
+
+· BEGIN{}行前处理.读取文件内容前执行,指令执行1次,一般用于初始化
+· {}逐行处理,读取文件过程中执行,指令执行n次
+· END{}行后处理,读取文件结束后执行,指令执行1次,一般用于总结输出
+
+/正则/          全行匹配(包含即可)
+$1~/正则/       第一列匹配
+$1!~/正则       取反
+
+2.使用数值/字符串比较设置条件
+比较符号:
+==(等于)!=(不等于)>(大于)
+>=(大于等于)<(小于)<=(小于等于)
+
+数字/字符精确匹配
+$3>=1000
+$3<1000
+$1=="root"
+&&    ||
+# awk -F: '$3>1000&&$3<1003'  /etc/passswd
+# awk -F: '$3>1000||$3<10' /etc/passwd
+对
+
+# awk -F: '$3>1000||$3<1003' /etc/passwd
+# awk -F: '$3>1000&&$3<10' /etc/passwd
+错
+
+3.分支结构
+awk [选项] '条件{指令}' 文件
+
+awk [选项] '{if($3<=1000){x++}}' 文件
+
+案例:
+# awk 'BEGIN{A=24;print A*2}'
+48
+# awk 'BEGIN{print x+1}'        //x可以不定义,直接用
+1
+# awk 'BEGIN{print 3.2+3.5}'
+6.7
+
+三.awk中数组的使用
+
+
+
+# awk -F: 'BEGIN{print "用户名""\t""UID""\t""家目录"}{print $1"  "$3"  "$6}' /etc/passwd | column -t
+用户名               UID    家目录
+root             0      /root
+
+# awk '/bash$/{print}' /etc/passwd
+root:x:0:0:root:/root:/bin/bash
+student:x:1000:1000:Student User:/home/student:/bin/bash
+
+# awk '/bash$/' /etc/passwd                                 //两者等价
+root:x:0:0:root:/root:/bin/bash
+student:x:1000:1000:Student User:/home/student:/bin/bash
+
+# awk -F: '/^(root|adm)/{print $1,$3}' /etc/passwd          //正则
+root 0
+adm 3
+
+输出第1列包含root:
+# awk -F: '$1~/root/' /etc/passwd
+root:x:0:0:root:/root:/bin/bash
+
+# awk -F: '$7!~/nologin$/{print $1,$7}' /etc/passwd
+root /bin/bash
+sync /bin/sync
+shutdown /sbin/shutdown
+halt /sbin/halt
+student /bin/bash
+
+# awk -F: 'NR==3{print $1}' /etc/passwd
+awk -f: 'NR==3{print $1}' /etc/passwd
+
+# awk -F: '$3>=1000{print $1}' /etc/passwd
+nfsnobody
+student
+
+# awk -F: '$1=="root"' /etc/passwd
+root:x:0:0:root:/root:/bin/bash
+
+# awk -F: -v x=$i '$1==x' /etc/shadow
+root:$6$UiGI4Tc2$htsXYn5cJnOqv3P1VLcUSgfjDu2pL5yiJBuua6foZAHdwqeuLHfYUfS/vBn27Wjvoel8EJgtdsMjyquqvKAmf1:16261:0:99999:7:::
+
+

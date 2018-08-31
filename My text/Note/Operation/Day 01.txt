@@ -1,0 +1,123 @@
+Day 01 Nginx安装与升级 Nginx服务器 Nginx虚拟主机 、 HTTPS加密网站
+
+一.Nginx安装与升级
+
+1.Web服务器对比
+· Unix和Linux平台下
+  - Apache,Nginx,Tengine,Lighttpd		//php
+  - Tomcat,IBM WebSphere,Jboss			//Java
+· Windows平台下
+  - 微软公司的IIS
+
+· Nginx
+  - 俄罗斯人,轻量级http服务器
+  - 是一个高性能的HTTP和反向代理服务器,同时也是一个IMAP/POP3/SMTP 代理服务器
+
+####################################################################
+
+nginx服务安装
+
+# yum -y install gcc pcre-devel openssl-devel        //安装依赖包
+# useradd -s /sbin/nologin nginx
+# tar -xf nginx-1.10.3.tar.gz
+# cd nginx-1.10.3/
+# ./configure \
+> --prefix=/usr/local/nginx
+> --user=nginx
+> --group=nginx
+> --with-http_ssl_module
+# make && make install
+
+netstat命令可以查看系统中启动的端口信息，该命令常用选项如下：
+-a显示所有端口的信息
+-n以数字格式显示端口号
+-t显示TCP连接的端口
+-u显示UDP连接的端口
+-l显示服务正在监听的端口信息，如httpd启动后，会一直监听80端口
+-p显示监听端口的服务名称是什么（也就是程序名称）
+
+# netstat -antulp | grep nginx
+tcp        0      0 0.0.0.0:80              0.0.0.0:*               LISTEN      6471/nginx: master
+
+###############################################################
+
+2.nginx升级
+· 模块安装 -> 仅安装sbin下主文件
+
+kill pid
+killall name
+
+二.nginx虚拟主机与网站加密
+
+1.配置文件
+/usr/local/nginx/conf/nginx.conf
+
+2.虚拟主机配置
+http{
+	server{
+		listen       80;
+		server_name  localhost;
+		root html;
+		index index.html;
+	}
+}
+
+3.网站加密
+1)修改配置
+http{
+	server{
+		listen       80;
+		server_name  localhost;
+
+		auth_basic "Input Password:";
+		auth_basic_user_file "/usr/local/nginx/pass";
+
+		root html;
+		index index.html;
+	}
+}
+
+# yum install httpd-tools -y				//安装加密工具包
+# htpass -c /usr/local/nginx/pass tom
+New password: 
+Re-type new password: 
+Adding password for user dc
+# nginx -s reload
+
+· 验证:
+[root@room9pc01 ~]# firefox 192.168.4.5
+
+4.vim批量修改
+ctrl+v 多选,相当于图形txt中按住shift
+
+5.SSL虚拟主机
+
+· 该站点通过https访问,通过私钥、证书对该站点所有数据加密
+
+  - 源码安装Nginx时必须使用--with-http_ssl_module参数，启用加密模块，对于需要进行SSL加密处理的站点添加ssl相关指令（设置网站需要的私钥和证书）。
+· 专业用语解释: 公钥(证书)
+· 加密算法一般分为对称算法、非对称算法、信息摘要。
+	- 对称算法有：AES、DES，主要应用在单机数据加密。
+	- 非对称算法有：RSA、DSA，主要应用在网络数据加密。
+	- 信息摘要：MD5、sha256，主要应用在数据完整性校验、数据秒传等。
+
+# cd /usr/local/nginx/conf
+# openssl genrsa > cert.key                            //生成私钥
+# openssl req -new -x509 -key cert.key > cert.pem      //生成证书
+
+# vim  /usr/local/nginx/conf/nginx.conf
+… …    
+server {
+        listen       443 ssl;
+        server_name            www.c.com;
+        ssl_certificate      cert.pem;         #这里是证书文件
+        ssl_certificate_key  cert.key;         #这里是私钥文件
+        ssl_session_cache    shared:SSL:1m;
+        ssl_session_timeout  5m;
+        ssl_ciphers  HIGH:!aNULL:!MD5;
+        ssl_prefer_server_ciphers  on;
+        location / {
+            root   html;
+            index  index.html index.htm;
+        }
+    }

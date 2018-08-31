@@ -1,0 +1,149 @@
+Day 04 传输层
+
+一.传输层作用
+  · 网络层提供点到点的连接
+  · 传输层提供端到端的连接
+
+二.传输层的协议
+  · TCP
+    -传输控制协议
+    -可靠的,面向连接的协议
+    -传输效率低
+  · UDP
+    -用户数据报协议
+    -不可靠的,无连接的服务
+    -传输效率高
+三.TCP协议
+1.TCP的封装格式
+  · SYN 请求标记
+  · ACK 确定标记
+2.TCP连接过程:三次握手
+  客户端:SYN seq=100,ctl=SYN
+  服务端:SYN,ACK seq=300,ack=101,ctl=SYN,ACK
+  客户端:ACK seq=101,ack=301,ctl=ACK
+3.TCP的四次断开
+  客户端:发送 FIN,请求断开连接(FIN=1,ACK=1)
+  服务端:发送 ACK(ACK=1)
+  服务端:发送 FIN,请求断开连接(FIN=1,ACK=1)
+  客户端:发送ACK(ACK=1)
+4.TCP的应用
+端口 	协议 	说　　明
+
+21 	FTP 	FTP服务器所开放的控制端口
+
+23 	TELNET 	用于远程登录，可以远程控制管理目标计算机
+
+25 	SMTP 	SMTP服务器开放的端口，用于发送邮件
+
+80 	HTTP 	超文本传输协议
+
+53 	DNS 	域名服务，当用户输入网站的名称后，由DNS负责将它解析成IP地址，这个过程中用到的端口号是53
+
+四.UDP协议
+1.UDP的流控和差错控制
+  · UDP缺乏可靠机制
+  · UDP只有校验和来提供差错控制
+    -需要上层协议来提供差错控制:如TFTP协议
+2.UDP的应用
+端口	协议	说明
+
+69	TFTP	简单文件传输协议
+
+123	NTP	网络时间协议
+
+53	DNS	域名服务
+
+五.访问控制列表概述
+1.访问控制列表(ACL)
+  - 读取第三层,第四层头部信息
+  - 根据预先定义好的规则对数据进行过滤
+2.访问控制列表的类型
+  · 标准访问控制列表
+    - 基于源IP地址过滤数据包
+    - 标准访问控制列表的表号是1~99
+  · 扩展访问控制列表
+    - 基于源IP地址,目的IP地址,指定协议,端口来过滤数据包
+    -扩展访问控制列表的访问控制列表号是100~199
+3.标准访问控制列表的配置
+  
+  · 创建ACL
+    ()#access-list $number { permit | deny } source [ source-wildcard ]
+  
+  · 实例
+    //允许192.168.1.0/24网段的流量通过
+    Router(config)# access-list 1 permit 192.168.1.0 0.0.0.255
+    //允许192.168.2.2主机的流量通过
+    Router(config)# access-list 1 permit 192.168.2.2 0.0.0.0
+  
+  · 隐含的拒绝语句(拒绝所有人)
+    Router(config)# access-list 1 deny 0.0.0.0 255.255.255.255
+  
+  · 关键字
+    -host
+    -any
+  
+  · 将ACL应用于接口
+  Router(config-if)# ip access-group $number {in|out}
+
+  · 删除ACL
+  Router(config-if)# no ip access-group $number {in |out}
+
+4.扩展访问控制列表的配置
+  · 创建ACL
+  Router(config)# access-list $number { permit | deny } protocol { source source-wildcard destination destination-wildcard } [ operator operan ]
+
+六.NAT概述
+1.NAT作用
+  · NAT
+    -网络地址转换
+  · 作用
+    -通过将内部网络的私有IP地址翻译成全球唯一的公网IP地址,使内部网络可以连接到外部网络上
+  · NAT的优点
+    -节省公有合法IP地址
+    -处理地址重叠
+    -安全性
+  · NAT的缺点
+    -延迟增大
+    -配置和维护的复杂性
+
+2.NAT实现方式
+  · 静态转换
+  · 端口多路复用
+
+3.静态转换
+  · IP地址的对应关系是一对一的,而且是不变的,借助静态转换,能实现外部网络对内部网络中某些特设定服务器的转换
+  · 静态NAT配置步骤
+    -接口IP地址配置
+    -决定需要转换的主机地址
+    -决定采用什么公有地址
+    -在内部和外部端口上启用NAT
+    ()#ip nat inside source static $localIP $globalIP
+  · 将内网地址192.168.1.1静态转换为合法的外部地址100.0.0.2以便访问外网
+  · 设置外部端口的IP地址
+    Router(config)#interface g0/1
+    Router(config-if)#ip address 100.0.0.1 255.0.0.0
+    Router(config-if)#no shut
+  · 设置内部端口的IP地址
+    Router(config)#interface g0/0
+    Router(config-if)#ip address 192.168.1.254 255.255.255.0
+    Router(config-if)#no shut
+  · 建立静态地址转换
+    Router(config)#ip nat inside source static 192.168.1.1 100.0.0.2
+  · 在内部和外部端口上启用NAT
+    Router(config)#interface g0/1
+    Router(config-if)#ip nat outside
+    Router(config)#interface g0/0
+
+4.NAT端口映射
+  · 建立NAT端口映射
+  · 配置实例(只发布服务器的80端口)
+    Router(config)#ip nat inside source static tcp 192.168.1.6 80 61.159.62.133 80 
+    Router(config-if)#ip nat inside
+
+5.端口多路复用(PAT)
+  · ACL定义内部IP地址
+    Router(config)#access-list 1 permit 192.168.1.0 0.0.0.255
+  · 设置复用动态IP地址转换
+  //配置端口多路复用使企业内网192.168.1.0/24复用g0/1端口的ip,实现外部网络的访问
+    Router(config)#ip nat inside source list 1 interface g 0/1 overload
+  · PAT只适用于内网访问外网,无法架设服务

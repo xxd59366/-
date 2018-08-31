@@ -1,0 +1,242 @@
+Day 04 系统&服务管理进阶 批量装机环境 配置PXE引导 kickstart自动应答
+
+补充:虚拟机命令行管理
+# virt-manager		//启用图形虚拟系统管理器
+# virsh list		//列出正在运行的虚拟机
+# virsh list --all	//列出所有虚拟机
+# clone-vm7		//产生一个新的虚拟机
+# virsh list --all
+# virsh start xxx	//开启虚拟机
+# virsh list --all
+# virsh console xxx	//直接控制虚拟机,不需要IP
+  退出终端管理模式:Ctrl + ]
+
+############################################################
+
+一.网络批量装机环境
+
+1.部署DHCP服务器
+  1)DHCP概述及原理
+  · Dynamic Host Configuration Protocol
+    -动态主机配置协议,由IETF(Internet 网络工程师人物小组)组织指定,用来简化主机地址分配管理
+
+    · 主要分配以下入网参数
+      - IP地址/子网掩码/广播地址
+      - 默认网关地址,DNS服务器地址
+  · DHCP工作分配原理(广播进行)
+    - 一个网络中只能有一个DHCP服务器
+    - 判断机制:先到先得
+  · 地址分配的四次会话
+    - DISCOVERY --> OFFER --> REQUIST --> ACK
+      客户机广播   路由反馈  
+
+###################################################################
+
+一.配置dhcpd地址分配服务
+
+虚拟机svr7:
+1.安装dhcp服务包
+# yum -y install dhcp
+2.修改配置文件/etc/dhcp/dhcpd.conf
+末行模式输入 :r /user/share/doc/dhcp*/dhcpd.conf.example
+
+ subnet 192.168.4.0 netmask 255.255.255.0 {     #分配的网段
+  range 192.168.4.100 192.168.4.200;            #分配的IP地址范围
+  option domain-name-servers 192.168.4.7;       #分配的DNS地址
+  option routers 192.168.4.254;                 #分配的网关地址
+  default-lease-time 600;                       #IP地址默认租期
+  max-lease-time 7200;                          #IP地址最大租期
+}
+3.重启服务
+# systemctl restart dhcpd  
+
+2.网络装机概述
+  1)网络装机的优势
+
+  -规模化:同时装配多台主机
+  -自动化:装系统,配置等各种服务
+  -远程实现:不需要光盘,U盘等物理安装介质
+
+  2)什么是PXE网络
+  
+  ·PXE,Pre-boot eXecution Environment
+    -预启动执行环境,在操作系统之前运行
+    -可用于远程安装
+  ·工作模式
+    -PXE client集成在网卡的启动芯片中
+    -当计算机引导时,从网卡芯片中把PXE client调入内存执行.获取PXE server配置,显示菜单,根据用户选择将远程引导程序下载到本机运行
+
+  3)PXE组件及过程分析
+  
+  ·需要哪些服务组件
+    -DHCP服务,分配IP,定位引导程序
+    -TFTP服务,提供引导程序下载		//TFTP:简单的文件传输协议,端口69
+    -HTTP服务(或FTP/NFS),提供yum安装源
+  
+  ·简略过程示意图
+
+	 next-server					
+	-------------->	        
+客户端                   DHCP  <----------------- TFTP
+  ｜    <--------------	         众多的引导文件     |
+  ｜        IP地址                                  |
+   ------<-----------------<----------------<-------
+                         rpm包
+                      图vim版
+
+	 next-server					
+	-------------------->	        
+客户端                   DHCP  <----------------- TFTP
+   |    <--------------------               众多的引导文件     |
+  |        IP地址                                      |
+    -------<-----------------------<-----------------------------<----------
+                   rpm包
+                      图txt版
+
+############################################################
+
+1.修改配置文件
+# vim /etc/dhcp/dhcpd.conf
+
+subnet 192.168.4.0 netmask 255.255.255.0 {
+  range 192.168.4.100 192.168.4.200;
+  option domain-name-servers 192.168.4.7;
+  option routers 192.168.4.254;
+  default-lease-time 600;
+  max-lease-time 7200;
+  next-server 192.168.4.7;	#指定下一个服务器
+  filename "pxelinux.0";	#指定网卡引导文件名称
+}
+
+2.重启dhcpd服务
+# systemctl restart dhcpd
+
+    pxelinix.0:网卡引导文件(网络装机说明书)二进制文件
+	       安装一个软件可以自动产生默认叫pxelinux.0
+
+######################################################################
+
+二.搭建TFTP服务
+
+简单的文件传输协议 端口69
+tftp默认共享数据路径 /var/lib/tftpboot
+
+1.安装tftp-server包
+# yum -y install tftp-server
+
+2.启动tftp服务
+# systemctl restart tftp
+# ls /var/lib/tftpboot
+
+3.部署pxelinux.0文件
+# yum provides */pxelinux.0			//查询仓库中哪个软件包产生该文件
+
+# yum -y install syslinux-4.05-13.el7.x86_64
+# rpm -ql syslinux | grep pxelinux.0		//查询软件包安装清单
+
+# cp /usr/share/syslinux/pxelinux.0 /var/lib/tftpboot/
+# ls /var/lib/tftpboot
+
+4.部署菜单文件 
+  pxelinux ---> /var/lib/tftpbppt/pxelinux.cfg/default
+
+  1)创建菜单目录
+  # mkdir /var/lib/tftpboot/pxelinux.cfg
+  # ls /var/lib/tftpboot/
+  pxelinux.0  pxelinux.cfg
+
+  2)从光盘拷贝菜单配置文件
+  # scp /var/ftp/rhel7/isolinux/isolinux.cfg root@192.168.4.7:/var/lib/tftpboot/pxelinux.cfg/default
+  · 为了修改方便,给管理员加上写权限
+  # chmod u+w /var/lib/tftpboot/pxelinux.cfg/default
+  # ll /var/lib/tftpboot/pxelinux.cfg/default
+-rw-r--r--. 1 root root 3166 7月  24 14:25 /var/lib/tftpboot/pxelinux.cfg/default
+
+5.部署引导文件(启动内核)
+  vesamenu.c32	图形模块,呈现背景图片与颜色等
+  vmlinuz	启动内核
+  initrd.img	驱动程序
+  splash.png	黑色背景图片
+
+  # scp /var/ftp/rhel7/isolinux/vesamenu.c32 /var/ftp/rhel7/isolinux/vmlinuz /var/ftp/rhel7/isolinux/initrd.img /var/ftp/rhel7/isolinux/splash.png root@192.168.4.7:/var/lib/tftpboot/
+  # ls /var/lib/tftpboot/
+initrd.img  pxelinux.0  pxelinux.cfg  splash.png  vesamenu.c32  vmlinuz
+
+6.修改菜单文件内容
+# vim /var/lib/tftpboot/pxelinux.cfg/default
+
+ 1 default vesamenu.c32			#默认加载图形模块
+ 2 timeout 600				#默认读秒
+
+ 11 menu title NSD1806 PXE SERVER	#修改标题
+
+ 61 label linux
+ 62   menu label ^Install RHEL7.4
+      menu default			#读秒结束默认选择
+ 63   kernel vmlinuz
+ 64   append initrd=initrd.img
+
+#################################################################
+初步测试:
+  1.新建虚拟机 选择PXE网络引导安装
+  2.网络类型选择private1
+
+#################################################################
+三.构建httpd服务,利用web共享众多的rpm包
+
+1.安装软件包
+# yum -y install httpd
+# systemctl restart httpd
+
+2.建立共享路径
+# mkdir /var/www/html/rhel7
+# vim /etc/exports	//真机通过nfs共享给svr7
+/var/ftp/rhel7 192.168.4.0/24(ro)
+
+# mount 192.168.4.254:/var/ftp/rhel7 /var/www/html/rhel7/
+# ls /var/www/html/rhel7
+
+3.测试
+# firefox 192.168.4.7/rhel7
+
+###############################################################
+
+四.部署无人值守安装,生成应答文件
+
+  1.图形生成应答文件工具system-config-kickstart
+  # yum -y install system-config-kickstart
+  
+  2.运行工具system-config-kickstart
+  · 检查"软件包选择"是否可以选择
+  与本机Yum仓库标识有关: [development]
+  
+  3.查看应答文件
+  # ls /root/ks.cfg
+  # vim /root/ks.cfg
+
+  4.利用web共享ks应答文件,传递给客户端
+  # cp /root/ks.cfg /var/www/html
+  # ls /var/www/html
+
+##############################################################
+
+五.修改菜单文件,指定ks应答文件
+
+# vim /var/lib/tftpboot/pxelinux.cfg/default
+
+label linux
+  menu label ^Install RHEL7.4
+  menu default
+  kernel vmlinuz
+  append initrd=initrd.img ks=http://192.168.4.7/ks.cfg
+
+###############################################################
+
+总结:
+    DHCP --> IP地址,next-server,filename
+    tftp --> pxelinux.0
+    pxelinux.0 --> /var/lib/tftpboot/pxelinux.cfg/default
+    default --> vesamenu.c32\splash.png\vmlinuz\inittrd.img
+    ks="http://192.168.4.7/rhel7"
+
+###############################################################

@@ -1,0 +1,196 @@
+Day 01 Shell概述 编写及执行脚本 Shell变量 总结和答疑
+
+一.Shell环境及特性
+1.什么是shell
+  · 在Linux内核与用户之间的解释器程序
+    -通常指/bin/bash
+    -负责向内核翻译及传达用户/程序指令
+    -相当于操作系统的"外壳"
+
+    ·shell:概念的统称
+    ·bash:具体的形式
+  
+  # cat /etc/shells
+
+  /bin/sh
+  /bin/bash
+  /sbin/nologin
+  /usr/bin/sh
+  /usr/bin/bash
+  /usr/sbin/nologin
+  /bin/tcsh
+  /bin/csh
+
+  # yum -y install ksh
+
+  # cat /etc/shells
+
+  /bin/sh
+  /bin/bash
+  /sbin/nologin
+  /usr/bin/sh
+  /usr/bin/bash
+  /usr/sbin/nologin
+  /bin/tcsh
+  /bin/csh
+  /bin/ksh
+  
+  # ksh
+  ·切换到ksh解释器, 按exit退出
+
+2.Shell的使用方式 一阶段回顾
+  · 交互式  --命令行
+    -人工干预,智能化程度高
+    -逐条解释执行,效率低
+  · 非交互式  --脚本
+    -需要提前设计,智能化难度大
+    -批量执行,效率高
+    -方便在后台静默运行
+
+  · 计划任务
+
+    # at 21:00
+    at >ls
+    at >cd /
+    at >ls
+
+  · 快捷键:
+    ctrl+s:挂起,冻结终端
+    ctrl+q:解除挂起/冻结终端
+    ctrl+d:结束输入
+
+  · 历史记录文件配置:
+    # vim /etc/profile
+    ...
+    HISTSIZE=1000
+    
+    history | wc -l
+    1000
+
+    1031 grep 'zhangsan' /etc/passwd
+    //两种调用方法
+    !grep
+    !1031
+  · 清除历史命令
+    # history -c  //清空自己的历史命令
+    > ~/.bash_history  //清空记录文件
+
+  · 别名
+    1)查看别名
+      # alias
+      alias cp='cp -i'
+      alias egrep='egrep --color=auto'
+      alias fgrep='fgrep --color=auto'
+      alias grep='grep --color=auto'
+      alias l.='ls -d .* --color=auto'
+      alias ll='ls -l --color=auto'
+      alias ls='ls --color=auto'
+      alias mv='mv -i'
+      alias rm='rm -i'
+      alias which='alias | /usr/bin/which --tty-only --read-alias --show-dot --show-tilde'
+
+    tip:别名设置一般存放在用户的.bashrc内
+
+    2)取消别名
+      # unalias
+  
+  · 标准输入/输出/错误输出
+    标准输入(stdin),描述号为0;
+    标准输出(stdout),描述号为1;
+    保准错误(stderr),描述号为2;
+
+    1)重定向标准输出
+    - 使用'>'将命令执行的正常输出重定向到文件
+    - '>' 先清空再覆盖
+    - '>>' 追加重定向
+    2)重定向标准错误
+    - 使用'2>'将错误信息重定向到文件
+    - 使用'2>>'将错误信息追加重定向到文件
+    3)全部重定向
+    - 使用'&>'将所有信息重定向到文件
+    4)分别重定向
+    //将正确的信息重定向到a.txt,错误信息重定向到b.txt
+    # ls a.txt nb.txt >a.txt 2>b.txt
+    # cat a.txt b.txt 
+    a.txt
+    ls: 无法访问nb.txt: 没有那个文件或目录
+  
+  · 编写一个脚本,建立user1-user200
+  
+    for i in {1..200}
+    do
+      useradd user$i 2>> a.log
+      echo "12345" | passwd --stdin user$i > /dev/null
+    done
+
+3.Shell脚本格式
+  · 一个规范的Shell脚本构成包括：
+    - 脚本声明（需要的解释器、作者信息等）
+    - 注释信息（步骤、思路、用途、变量含义等）
+    - 可执行语句（操作代码）
+    
+4.Shell脚本运行方式
+	· 给权限 -> 绝对路径
+  · bash/sh 脚本名   - - 开子进程
+  · source 脚本名  - - 不开子进程
+  
+  example:
+  # bash sleep.sh
+  
+  # pstree | grep bash
+        |-sshd-+-sshd---bash---bash---sleep
+        |      `-sshd---bash-+-grep
+	
+	
+	# source sleep.sh
+	
+	# pstree | grep bash
+        |-sshd-+-sshd---bash---sleep
+        |      `-sshd---bash-+-grep
+	
+	# history | wc -l
+  11
+  # vim /etc/profile
+  HISTSIZE=10
+  # bash /etc/profile
+  # history | wc -l
+  14
+  # source /etc/profile
+  # history | wc -l
+  10
+  
+5.变量
+  1)建立变量
+    test=11
+  2)取消变量
+    unset test
+  3)变量与常量的区分
+    echo ${test}RMB
+  4)系统环境变量
+    大写
+    env:查看所有环境变量
+    
+  5)$0 - 脚本自身
+    $1-n - 脚本第n个参数
+    $* - 脚本所有参数
+    $$ - 脚本pid
+    $? - 判断脚本(命令)是否执行成功
+    
+  6)符号运用
+    引号: 将内容划分为一个整体参数
+      - 单引号:内部符号全部判定为字符串
+      - 双引号:内部特殊符号照常执行,其他判定为字符串
+    双撇: 执行内部语句
+
+  7)read用法
+    # read str  由用户输入,赋值给变量str
+    //通过[-p]选项给出提升
+    # read -p "请输入一个整数:"i
+  
+  8)stty终端显示控制
+    · 将回显功能关闭(stty -echo)
+    · 将回显功能恢复(stty echo)
+
+  9)若希望定义的变量能被子进程使用，可以使用export命令将其发布为全局变量。使用export发布时，只需指定变量名（可以有多个）即可，也可以通过export命令直接设置新的全局变量
+    # export yy            //发布已定义的变量
+    # export XX="1234"     //发布新变量

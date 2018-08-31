@@ -1,0 +1,32 @@
+一.逻辑卷问题:
+1.新的硬盘
+2.卷组 --> 逻辑卷 xfs 
+3.新硬盘 -->  xfs --> 并入卷组 --> 扩展逻辑卷
+
+
+
+
+<form id="xx" method="post" >
+<input type="text" id="zhanghao"></input>
+<input type="password" id="mima"></input>
+</form>
+
+String zhanghao = getP.....("zhanghao");
+String mima = get.......("mima");
+print(zhanghao+"\n"+mima);
+
+e
+rd.break console=tty0
+ctl+x
+mount -o remount,rw /sysroot
+chroot /sysroot
+echo redhat | passwd --stdin root
+touch /.autorelabel
+exit
+reboot
+
+
+内核安装
+
+nss-pam-ldapd
+pam_ldap

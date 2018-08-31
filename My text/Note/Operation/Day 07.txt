@@ -1,0 +1,301 @@
+Day 07 VPN服务器  NTP时间同步  PSSH远程工具
+
+一.VPN服务器
+1.VPN概述
+· Virtual Private Network(虚拟专用网络)
+  - 在公用网络上建立专用私有网络,进行加密通讯
+  - 多用于为集团公司的各地子公司建立连接
+  - 连接完成后,各个地区的子公司可以像局域网一样通讯
+  - 在企业中由广泛应用
+  - 偶尔可以用于翻墙
+  - 目前主流的VPN技术(GRE,PPTP,L2TP+IPSec,SSL)
+
+2.GRE模块VPN
+1)启用GRE模块(client和proxy都需要操作，下面以client为例)
+    1.查看计算机当前加载的模块
+     # lsmod                               //显示模块列表
+     # lsmod | grep ip_gre                 //确定是否加载了gre模块
+    2.加载模块ip_gre
+     # modprobe ip_gre
+     # lsmod | grep ip_gre
+    3.查看模块信息
+     # modinfo ip_gre
+
+2)Client主机创建VPN隧道
+    1.创建隧道
+     # ip tunnel add tun0 mode gre \
+     > remote 201.1.2.5 local 201.1.2.10
+     //ip tunnel add 创建隧道(隧道名称为tun0),ip tunnel help 可以查看帮助
+     //mode设置隧道使用gre模式
+     //local后面跟本机的IP地址,remote后面是与其他主机建立隧道的对方ip地址
+     //ip link 查看
+    2.启用该隧道(类似于设置网卡ip)
+     # ip link show
+     # ip link set tun0 up                 //设置up
+     # ip link show
+    3.为VPN配置隧道IP地址
+     # ip addr add 10.10.10.10/24 peer 10.10.10.5/24 \
+     > dev tun0
+      //为隧道tun0设置本地IP地址(10.10.10.10/24)
+      //隧道对面的主机ip的ip隧道为10.10.10.5/24
+     # ip a s                              //查看ip地址
+    4.关闭防火墙和selinux
+     # firewall-cmd --set-default-zone=trusted
+
+3)Proxy主机创建VPN隧道
+    1.同上步骤开启通道: ping 10.10.10.10 可通
+    2.开启路由转发,关闭防火墙
+     # echo "1" > /proc/sys/net/ipv4/ip_forward
+     # firewall-cmd --set-default-zone=trust
+     
+3.创建PPTP VPN
+
+· 部署VPN服务器
+1)安装软件包
+[root@proxy ~]# yum localinstall pptpd-1.4.0-2.el7.x86_64.rpm
+[root@proxy ~]# rpm -qc pptpd
+/etc/ppp/options.pptpd
+/etc/pptpd.conf
+/etc/sysconfig/pptpd
+
+2)修改配置文件
+[root@proxy ~]# vim /etc/pptpd.conf
+.. ..
+localip 201.1.2.5                                    //服务器本地IP
+remoteip 192.168.3.1-50                            //分配给客户端的IP池
+[root@proxy ~]# vim /etc/ppp/options.pptpd
+require-mppe-128                                    //使用MPPE加密数据
+ms-dns 8.8.8.8                                    //DNS服务器
+[root@proxy ~]# vim /etc/ppp/chap-secrets            //修改账户配置文件
+jacob           *               123456      *
+//用户名    服务器标记    密码    客户端
+[root@proxy ~]# echo "1" > /proc/sys/net/ipv4/ip_forward    //开启路由转发
+
+3)启动服务
+# systemctl start pptpd
+# systemctl enable pptpd
+# firewall-cmd --set-default-zone=trusted
+
+4)翻墙设置(非必须)
+root@proxy ~]# iptables -t nat -A POSTROUTING -s 192.168.3.0/24 \
+>  -j SNAT --to-source 201.1.2.5
+
+· 客户端设置
+启动一台Windows虚拟机，将虚拟机网卡桥接到public2，配置IP地址为201.1.2.20。
+新建网络连接，输入VPN服务器账户与密码，连接VPN并测试网络连通性。
+
+4.创建L2TP+IPSec VPN
+
+· 部署IPSec服务
+
+  1)安装软件包
+   # yum -y install libreswan
+  2)新建IPSec密钥验证配置文件
+   # cat /etc/ipsec.conf                          //仅查看一下该主配置文件
+   .. ..
+   include /etc/ipsec.d/*.conf                    //加载该目录下的所有配置文件
+   
+   [root@client ~]# vim /etc/ipsec.d/myipsec.conf            
+//新建该文件，参考lnmp_soft/vpn/myipsec.conf    
+conn IDC-PSK-NAT
+    rightsubnet=vhost:%priv                        //允许建立的VPN虚拟网络
+    also=IDC-PSK-noNAT
+conn IDC-PSK-noNAT
+    authby=secret                                    //加密认证
+        ike=3des-sha1;modp1024                        //算法
+        phase2alg=aes256-sha1;modp2048                //算法
+    pfs=no
+    auto=add
+    keyingtries=3
+    rekey=no
+    ikelifetime=8h
+    keylife=3h
+    type=transport
+    left=201.1.2.200                                //重要，服务器本机的外网IP
+    leftprotoport=17/1701
+    right=%any                                    //允许任何客户端连接
+    rightprotoport=17/%any
+    
+  3)创建IPSec预定义共享密钥
+   # cat /etc/ipsec.secrets                       //仅查看，不要修改该文件
+   include /etc/ipsec.d/*.secrets
+   # vim /etc/ipsec.d/mypass.secrets              //新建该文件
+   201.1.2.200   %any:    PSK    "randpass"       //randpass为密钥
+                                                                //201.1.2.200是VPN服务器的IP
+                                                                
+  4)启动IPSec服务
+   [root@client ~]# systemctl start ipsec        
+   [root@client ~]# netstat -ntulp |grep pluto
+   udp        0      0 127.0.0.1:4500          0.0.0.0:*           3148/pluto          
+   udp        0      0 192.168.4.200:4500      0.0.0.0:*           3148/pluto          
+   udp        0      0 201.1.2.200:4500        0.0.0.0:*           3148/pluto          
+   udp        0      0 127.0.0.1:500           0.0.0.0:*           3148/pluto          
+   udp        0      0 192.168.4.200:500       0.0.0.0:*           3148/pluto          
+   udp        0      0 201.1.2.200:500         0.0.0.0:*           3148/pluto          
+   udp6       0      0 ::1:500                 :::*                 3148/pluto
+   
+· 部署XL2TP服务
+  1)安装软件包
+   # yum localinstall xl2tpd-1.3.8-2.el7.x86_64.rpm
+  2) 修改xl2tp配置文件（修改3个配置文件的内容)
+   #  vim  /etc/xl2tpd/xl2tpd.conf
+   [global]
+    .. ..    
+   [lns default]
+    .. ..
+   ip range = 192.168.3.128-192.168.3.254                    //分配给客户端的IP池
+   local ip = 201.1.2.200                                //VPN服务器的IP地址
+   
+   # vim /etc/ppp/options.xl2tpd                //认证配置
+   require-mschap-v2                                         //添加一行，强制要求认证
+   #crtscts                                                //注释或删除该行
+   #lock                                                //注释或删除该行
+   
+   # vim /etc/ppp/chap-secrets                    //修改密码文件
+   jacob   *       123456  *                //账户名称   服务器标记   密码   客户端IP
+   
+  3)启动服务
+   # systemctl start xl2tpd
+   # ss -antulp | grep xl2tpd
+   udp     0      0 0.0.0.0:1701      0.0.0.0:*          3580/xl2tpd
+   
+  4）设置路由转发，防火墙
+   # echo "1" > /proc/sys/net/ipv4/ip_forward
+   # firewall-cmd --set-default-zone=trusted
+  
+  5）翻墙设置（非必需操作）
+   # iptables -t nat -A POSTROUTING -s 192.168.3.0/24 \
+   >  -j SNAT --to-source 201.1.2.200
+
+二.NTP时间同步
+1.NTP协议概述
+· Network Time Protocol(网络时间协议)
+· 它用来同步网络中各个计算机的时间的协议
+· 210.72.145.39(国家授时中心服务器IP地址)
+
+· Stratum(分层设计)
+· Stratum层的总数限制在15以内(包括15)
+
+2.部署NTP服务
+  1)安装软件包
+   # yum -y install chrony
+   # rpm -qc chrony                        //查看配置文件列表
+   /etc/chrony.conf
+   /etc/chrony.keys
+    .. ..
+  2)修改配置文件
+    cat /etc/chrony.conf
+    .. ..
+   server 0.centos.pool.ntp.org iburst         //server用户客户端指向上层NTP服务器
+   allow 192.168.4.0/24                        //允许那个IP或网络访问NTP
+   #deny  192.168.4.1                        //拒绝那个IP或网络访问NTP
+   local stratum 10                            //设置NTP服务器的层数量
+    .. ..
+  
+  3)启动NTP服务
+   # systemctl restart chronyd
+   # systemctl enable chronyd
+   
+3.配置客户端
+
+  1)安装软件包
+   # yum –y install chrony
+  2) 修改配置文件
+   # vim /etc/chrony.conf
+   server 192.168.4.5 iburst                //设置与哪台服务器同步数据
+                                        //iburst参数设置重启服务后尽快同步时间
+  3) 将客户端时间修改为错误的时间
+   #  date  -s  "hour:minute"         //调整时间（小时：分钟）
+   #  date                            //查看修改后的时间
+  
+  4) 重启chrony与服务器同步时间
+   # systemctl  restart  chronyd
+  5) 确认时间是否已经同步
+   # date                            //多执行几次查看结果
+   
+三.pssh远程套件工具
+
+1.作用
+  a)使用密码批量、多并发远程其他主机
+  b)使用密钥批量、多并发远程其他主机
+  c)批量、多并发拷贝数据到其他主机
+  d)批量、多并发从其他主机下载数据到本机
+  e)批量、多并发杀死其他主机的进程
+
+2.准备工作
+  1）安装软件包
+   # rpm -ivh  pssh-2.3.1-5.el7.noarch.rpm
+  2) 修改/etc/hosts本地解析文件
+   cat /etc/hosts
+    … …
+   192.168.2.100  host1
+   192.168.2.200  host2
+   192.168.4.100  host3
+    … …
+  3) 创建主机列表文件
+   # cat /root/host.txt            //每行一个用户名、IP或域名
+    … …
+   root@host1
+   host2
+   host3
+    … …
+    
+3.使用密码批量、多并发远程其他主机
+  1）语法格式
+   # man pssh                    //通过man帮助查看工具选项的作用
+   pssh提供并发远程连接功能
+   -A                使用密码远程其他主机（默认使用密钥）
+   -i                将输出显示在屏幕
+   -H                设置需要连接的主机
+   -h                设置主机列表文件
+   -p                设置并发数量
+   -t                设置超时时间
+   -o dir            设置标准输出信息保存的目录
+   -e dir            设置错误输出信息保存的目录
+   -x                传递参数给ssh
+   
+4.使用密钥批量、多并发远程其他主机
+
+  1）生成密钥并发送密钥到其他主机
+   # ssh-keygen -N  ''   -f /root/.ssh/id_rsa     //非交互生成密钥文件
+   # ssh-copy-id  host1
+   # ssh-copy-id  host2
+   # ssh-copy-id  host3
+  2)使用密钥远程其他主机
+   # pssh -h host.txt  echo hello
+  3)使用密钥远程其他主机，将标准输出信息写入到/tmp目录
+   # pssh -h host.txt -o /tmp/  echo hello
+   
+5.批量、多并发拷贝数据到其他主机
+  1）语法格式
+   # man pscp.pssh                    //通过man帮助查看工具选项的作用
+   pscp.pssh提供并发拷贝文件功能
+   -r    递归拷贝目录
+  · 其他选项基本与pssh一致
+  2) 将本地的/etc/hosts拷贝到远程主机的/tmp目录下
+   # pscp.pssh -h host.txt  /etc/hosts  / tmp
+  3) 递归将本地的/etc目录拷贝到远程主机的/tmp目录下
+   # pscp.pssh -r -h host.txt   /etc   /tmp 
+   
+6.批量、多并发从其他主机下载数据到本机
+  1）语法格式
+   # man pslurp                    //通过man帮助查看工具选项的作用
+   pslurp提供远程下载功能
+  · 选项与pscp.pssh基本一致
+  2) 将远程主机的/etc/passwd，拷贝到当前目录下，存放在对应IP下的pass文件中
+   # pslurp  -h host.txt  /etc/passwd  /pass
+  · 注意：最后的pass是文件名
+  3) 将远程主机的/etc/passwd目录，拷贝到media下，存放在对应IP下的pass文件
+   # pslurp -h host.txt -L  /media   /etc/passwd   /pass
+   
+7.批量、多并发杀死其他主机的进程
+  1）语法格式
+   # man pnuke                    //通过man帮助查看工具选项的作用
+   pnuke提供远程杀死进程的功能
+  · 选项与pssh基本一致
+  2) 将远程主机上的sleep进程杀死
+   # pnuke  -h host.txt  sleep
+  3) 将远程主机上的test相关脚本都杀死（如：test1,testtt,test2等等）
+   # pnuke  -h host.txt  test
+  4) 将远程主机上的test.sh脚本杀死
+   # pnuke  -h host.txt  test.sh

@@ -1,0 +1,96 @@
+配置本地邮件服务
+
+
+在系统 server0 和 desktop0 上配置邮件服务，满足以下要求：
+这些系统不接收外部发送来的邮件
+在这些系统上本地发送的任何邮件都会自动路由到 smtp0.example.com
+从这些系统上发送的邮件显示来自于 desktop0.example.com
+您可以通过在 server0.example.com 发送邮件到本地用户 student 来测试您的配置，并将系统 desktop0.example.com 配置为后端邮件服务器，确保可接收并投递来自 server0 的邮件
+
+# vim /etc/postfix/main.cf
+relayhost=smtp0.example.com
+inet_interfaces = loopback-only
+myorigin = desktop0.example.com
+mynetworks = 127.0.0.1/8 [::1]/128
+mydestination = 
+local_transport = error:local delivery disabled
+
+# systemctl restart postfix
+# systemctl enable postfix
+
+# echo 'mail data' | mail-s 'Test01' student
+# mail -u student
+desktop0# mail -u student
+
+配置多人samba共享
+
+server0:
+# mkdir /devops
+# useradd kenji
+# useradd chihiro
+# pdbedit -a kenji
+# pdbedit -a chihiro
+# setfacl -m u:chihiro:rwx /devops
+# systemctl restart smb
+
+desktop0:
+# yum -y install samba-client cifs-utils
+# mkdir /mnt/dev
+# vim /etc/fstab
+//172.25.0.11/devops /mnt/dev cifs user=kenji,passsword=atenorth,multiuser,sec=ntlmssp,_netdev 0 0
+# mount -a
+# su - student
+$ cifscreds add -u chihiro server0
+Password:atenorth
+$ touch /mnt/dec/1.txt
+
+
+
+Server0:(改主机名)
+[root@serverX ~]# vim /etc/postfix/main.cf
+myorigin = desktop0.example.com #发件来源域
+inet_interfaces = loopback-only #仅本机接口
+mydestination = #此行的值为空
+mynetworks = 127.0.0.0/8 [::1]/128 #信任网络
+relayhost = [smtp0.example.com] #后端邮件服务器
+local_transport = error:local delivery disabled
+#此项先提供拒绝报错功能,若无要求可不设
+[root@serverX ~]# systemctl restart postfix
+[root@serverX ~]# systemctl enable postfix
+[root@serverX ~]# mail -s “dai” student </etc/passwd
+[root@serverX ~]#mail –u student
+#发信测试
+#本机无邮件
+No mail for student
+
+
+
+
+配置NFS共享服务
+
+
+在 server0 配置 NFS 服务，要求如下：
+以只读的方式共享目录 /public，只能被 example.com 域中的系统访问
+以读写的方式共享目录 /protected，只能被 example.com 域中的系统访问
+访问 /protected 需要通过 Kerberos 安全加密，您可以使用下面 URL 提供的密钥：http://classroom.example.com/pub/keytabs/server0.keytab
+目录 /protected 应该包含名为 project 拥有人为 ldapuser0 的子目录
+用户 ldapuser0 能以读写方式访问 /protected/project
+
+
+挂载NFS共享
+
+
+在 desktop0 上挂载一个来自 server0.example.com 的共享，并符合下列要求：
+/public 挂载在下面的目录上 /mnt/nfsmount
+/protected 挂载在下面的目录上 /mnt/nfssecure 并使用安全的方式，密钥下载 URL：http://classroom.example.com/pub/keytabs/desktop0.keytab
+用户 ldapuser0 能够在/mnt/nfssecure/project 上创建文件
+这些文件系统在系统启动时自动挂载
+
+客户端服务
+nfs-secure
+
+
+
+
+
+

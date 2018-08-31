@@ -1,0 +1,43 @@
+./configure \
+--with-http_ssl_module \
+--with-sream \
+--with-http_stub_status_module
+
+1.nginx访问80需要用户密码验证:
+# vim /usr/local/nginx/conf/nginx.conf
+http{
+.. ..
+	server {
+		listen  ;
+		server_name  ;
+
+		auth_basic "Input Password:";
+		auth_basic_user_file "/usr/local/nginx/pass"
+	}
+}
+# yum -y install httpd-tools
+# htpass -c /usr/local/nginx/pass tom
+123
+123
+# nginx -s reload
+
+2.nginx通过80端口连接数据库需要的前置包:
+php php-fpm php-mysql mariadb mariadb-server mariadb-devel
+
+3.rsync
+语法:rsync [..] 源 目标 (上行和下行均可)
+选项:
+-n:测试同步过程,不做实际修改
+-a:归档模式,相当于-rlptgoD
+-v:显示详细操作信息
+-z:传输过程中启用压缩/解压
+--delete:删除目标文件夹内多余的文档
+
+编译安装inotify监控工具
+·inotifywait [选项] 目标文件夹
+  
+·常用命令选项
+-m,持续监控(捕获一个事件后不退出)
+-r,递归监控,包括子目录及文件
+-q,减少屏幕输出信息
+-e,指定监视的midify,move,create,delete,attrib等事件类别

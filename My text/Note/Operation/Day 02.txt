@@ -1,0 +1,119 @@
+Day 02 部署LNMP Nginx+FastCGI 、 Nginx高级技术 
+
+一.部署LNMP(Linux,Nginx,Mariadb,PHP)
+
+1.静态页面与动态页面
+· 静态页面:无数据交互,只有页面文件(页面文件包括页面文字,图像,视频等素材),通过css(页面效果文件)可以实现一些简单或复杂的特效,但因为没有数据交互,也还是属于静态的范畴
+· 动态页面:有数据交互,会根据用户的操作实现功能交互(javascript,php等),或执行某个脚本实现固定功能
+
+2.环境准备
+	1)装包
+		· nginx
+		· mariadb、mariadb-server、mariadb-devel
+		· php、php-fpm、php-mysql
+	2)启服务
+		· nginx
+		· mariadb
+		· php-fpm
+
+3.动静分离
+	· nginx实现: 如果用户访问的是静态页面,则自己直接找到页面,直接返回
+	· 如果用户访问的是动态php页面,则转发给9000端口,解释后再返回
+	· localtion匹配用户的地址栏
+
+	location / {
+		allow all;
+	}
+	location /test {
+		allow all;
+		deny 1.1.1.1;
+	}
+	location /abc {
+		deny all;
+	}
+	
+http://www.a.com
+http://www.a.com/test/
+http://www.a.com/abc/
+http://www.a.com/qq/								//未定义,同'/'处理
+
+	location  ~  \.php$  {
+            root           html;
+            fastcgi_pass   127.0.0.1:9000;    #将请求转发给本机9000端口，PHP解释器
+            fastcgi_index  index.php;
+            #fastcgi_param   SCRIPT_FILENAME  $document_root$fastcgi_script_name;
+            include        fastcgi.conf;
+	}
+	
+4.php-fpm配置文件
+
+· FastCGI的内存消耗问题，一个PHP-FPM解释器将消耗约25M的内存。
+
+# vim /etc/php-fpm.d/www.conf
+[www]
+listen = 127.0.0.1:9000            //PHP端口号
+pm.max_children = 32                //最大进程数量
+pm.start_servers = 15                //最小进程数量
+pm.min_spare_servers = 5            //最少需要几个空闲着的进程
+pm.max_spare_servers = 32            //最多允许几个进程处于空闲状态
+
+Nginx的默认访问日志文件为/usr/local/nginx/logs/access.log
+Nginx的默认错误日志文件为/usr/local/nginx/logs/error.log
+PHP默认错误日志文件为/var/log/php-fpm/www-error.log
+
+二.地址重写
+
+1.关于Nginx服务器的地址重写，主要用到的配置参数是rewrite：
+· rewrite regex(正则) replacement flag
+· rewrite 旧地址 新地址 [选项]
+
+# vim /usr/local/nginx/conf/nginx.conf
+.. ..
+server {
+	listen       80;
+	server_name  localhost;
+	location / {
+		  root   html;
+	index  index.html index.htm;
+	rewrite /a.html  /b.html;            
+	}
+}
+
+# vim /usr/local/nginx/conf/nginx.conf
+.. ..
+server {
+	listen       80;
+	server_name  localhost;
+	location / {
+		  root   html;
+	index  index.html index.htm;
+	rewrite /a.html  /b.html  redirect;            
+	}
+}
+
+· redirect:地址栏随重写而变化
+
+# vim /usr/local/nginx/conf/nginx.conf
+.. ..
+server {
+	listen       80;
+	server_name  localhost;
+	rewrite ^/(.*)$ http://www.tmooc.cn/$1;
+	location / {
+		  root   html;
+	index  index.html index.htm;
+	# rewrite /a.html  /b.html  redirect;
+	}
+}
+
+2.地址重写格式总结
+
+rewrite 			旧地址 新地址 [选项];
+last 					不再读其他rewrite
+break 					不再读其他语句，结束请求
+
+
+//网络蜘蛛用(网络蜘蛛:百度,搜狗等)
+redirect 			临时重定向
+permament 		永久重定向
+SEO   SEM

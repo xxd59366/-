@@ -1,0 +1,215 @@
+Day 04 字符串处理 扩展的脚本技巧 正则表达式
+
+总结:
+1.变量相关
+echo ${变量}
+echo ${变量::}
+echo ${变量//}
+echo ${变量#}
+echo ${变量%}
+
+2.正则
+^开始
+$结尾
+[]集合,取集合中任意单个字符
+[^]对集合取反
+.任意单个字符
+*前一个字符任意次,包括0
+\{n,m\}前一个字符n到m次
+\{n\}前一个字符n次
+\{n,\}前一个字符n次以上
+\(\)保留
+
+
+一.字符串截取及切割
+
+1.字符串截取的三种方法
+
+· ${变量名:起始位置:长度}
+ex:
+[root@svr5 ~]# phone="13788768897"
+[root@svr5 ~]# echo ${#phone}
+11                                         //包括11个字符
+
+[root@svr5 ~]# echo ${phone:0:6}
+137887
+
+[root@svr5 ~]# echo ${phone:1:6}
+378876
+
+· expr substr "$变量名" 起始位置 长度
+ex:
+[root@svr5 ~]# echo $phone
+13788768897
+
+[root@svr5 ~]# expr substr "$phone" 1 6
+137887
+
+[root@svr5 ~]# expr substr "$phone" 9 3
+897
+
+· echo $变量名 | cut -b 起始位置-结束位置
+ex:
+[root@svr5 ~]# echo $phone
+13788768897
+
+[root@svr5 ~]# echo $phone | cut -b 1-6
+137887
+
+[root@svr5 ~]# echo $phone | cut -b 8-
+8897
+
+[root@svr5 ~]# echo $phone | cut -b 9
+8
+
+[root@svr5 ~]# echo $phone | cut -b 3,5,8
+788
+
+[root@svr5 ~]# vim rand.sh
+#!/bin/bash
+x=abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789
+//所有密码的可能性是26+26+10=62（0-61是62个数字）
+pass=''
+for i in {1..8}
+do
+num=$[RANDOM%62]
+tmp=${x:num:1}
+pass=${pass}$tmp
+done
+echo $pass
+
+#########################################################
+
+2.子串替换的两种方法
+
+· 只替换第一个匹配结果:${变量名/old/new}
+
+[root@svr5 ~]# echo  ${phone/8/X}
+137X8768897
+
+· 替换全部匹配结果:${变量//old/new}
+
+[root@svr5 ~]# echo  ${phone//8/X}
+137XX76XX97
+
+3.字符串掐头去尾
+
+· 从左向右,最短匹配删除:${变量名#*关键词}
+
+[root@svr5 ~]# echo ${A#*:}
+x:0:0:root:/root:/bin/bash
+
+· 从左向右,最长匹配删除:${变量名##*关键词}
+
+[root@svr5 ~]# echo $A                      //确认变量A的值
+root:x:0:0:root:/root:/bin/bash
+[root@svr5 ~]# echo ${A##*:}
+/bin/bash
+
+· 从右向左,最短匹配删除:${变量名%关键词*}
+
+[root@svr5 ~]# echo ${A%:*}
+root:x:0:0:root:/root
+
+· 从右向左,最长匹配删除:${变量名%%关键词*}
+
+[root@svr5 ~]# echo ${A%%:*}
+root
+
+[root@svr5 rendir]# vim renfile.sh
+#!/bin/bash
+for i in `ls *.doc`            #注意这里有反引号
+do
+    mv $i  ${i%.*}.txt
+done
+[root@svr5 ~]# chmod +x renfile.sh
+
+############################################
+
+额外:seq用法补充
+#!/bin/bash
+read -p '请输入累加最大值:' x
+sum=0
+x=${x:-1}
+seq -s + $x | bc
+
+seq -s - :
+以-s后的符号将值分隔
+seq -s + 10 等价于 1+2+3+4+5+6+7+8+9+10
+
+
+############################################
+4.字符串初值的处理
+
+1）只取值，${var:-word}
+  若变量var已存在且非Null，则返回 $var 的值；否则返回字串“word”，原变量var的值不受影响。
+  变量值已存在的情况：
+  [root@svr5 ~]# XX=11
+  [root@svr5 ~]# echo $XX              //查看原变量值
+  11
+  [root@svr5 ~]# echo ${XX:-123}      //因XX已存在，输出变量XX的值
+  11
+· 变量值不存在的情况：
+[root@svr5 ~]# echo ${YY:-123}      //因YY不存在，输出“123”
+123
+
+# cat /root/test.sh
+#!/bin/bash
+read  -p   "请输入用户名:"   user
+[ -z $user ] && exit                    //如果无用户名，则脚本退出
+read  -p   "请输入用户名:"   pass
+pass=${pass:-123456}                    //如果用户没有输入密码，则默认密码为123456
+useradd  $user
+echo "$pass"  | passwd   --stdin   $user
+
+二.expect工具
+
+1.安装expect工具
+[root@svr5 ~]# yum  -y  install  expect  
+
+2.写脚本
+#!/bin/bash
+expect << EOF
+spawn ssh -o StrictHostKeyChecking=no 172.25.0.10
+expect "password" {send "redhat\n"}
+expect "#" {send "touch /abc.txt\n"}
+expect "#" {send "exit\r"}
+EOF
+echo
+
+三.正则表达式
+
+1.基本正则表
+
+正则符号					                描述
+^						                      匹配行首
+$						                      匹配行尾
+[ ]						                    集合,匹配集合中的任意单个字符
+[^]						                    对集合取反
+.						                      匹配任意单个字符
+*						                      匹配前一个字符任意次数(*不允许单独使用)
+\{n,m\}					             匹配前一个字符n到m次
+\{n\}						             匹配前一个字符n次
+\{n,\}					              匹配前一个字符n次以上
+\(\)						                  保留
+
+2.扩展正则
+
+正则符号					                描述
++						                      最少匹配一次
+?						                      最多匹配一次
+{n,m}						             匹配n到m次
+()						                      组合为整体,保留
+|						                      或者
+\b						                单词边界
+
+3.应用案例
+  1)使用grep
+    # grep '^r' /etc/passwd
+    root:x:0:0:root:/root:/bin/bash
+    rpc:x:32:32:Portmapper RPC user:/:/sbin/nologin
+    rpcuser:x:29:29:RPC Service User:/var/lib/nfs:/sbin/nologin
+  2)若使用grep -E或egrep命令，可支持扩展正则匹配模式
+    # grep -E '^root|^daemon' /etc/passwd
+    root:x:0:0:root:/root:/bin/bash
+    daemon:x:2:2:daemon:/sbin:/sbin/nologin

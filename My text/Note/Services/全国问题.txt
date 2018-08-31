@@ -1,0 +1,15 @@
+一.各种文件传输服务的适用范围
+  
+  samba:Windows与Linux,可以支持挂载
+  
+  nfs:Linux与Linux,可以支持挂载
+  
+  ftp:兼容性强,构建简单
+  
+  tftp:简单数据传输,网络装机
+  
+  http:提供页面,用域名访问用户体验度好
+
+  scp:Linux与Linux,较少的文件进行传输
+
+

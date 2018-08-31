@@ -1,0 +1,74 @@
+Day 05 应用层
+
+一.STP生成树算法
+
+1.广播风暴的产生
+  • 交换机工作原理
+    – 根据MAC地址表转发数据帧,如果地址未知,则广播
+    – 如果交换机接收到广播帧也会向所有端口发送
+  • 当网络中存在物理环路,会产生广播风暴
+2.STP概述
+  • STP简介
+    – STP - Spanning Tree Protocol(生成树协议)
+    
+    逻辑上断开环路,防止广播风暴的产生
+    当线路故障,阻塞接口被激活,恢复通信,起备份线路的作用
+3.选择根网桥
+  • 网桥ID(BID)
+    – 网桥ID是唯一的,交换机之间选择BID值最小的交换机作为网络中的根网桥
+    
+    网桥优先级 2字节
+    网桥的MAC地址 6字节 取值范围:0 ~ 65535
+    缺省值:32768
+
+二.STP配置
+
+1.PVST+的配置命令
+
+• 启用生成树命令
+Switch(config)#spanning-tree vlan $vlanList
+
+• 指定根网桥
+Switch(config)#spanning-tree vlan $vlanList priority Bridge-priority
+Switch(config)#spanning-tree vlan $vlanList root { primary | secondary }
+
+• 查看生成树的配置
+Switch#show spanning-tree
+
+• 查看某个VLAN的生成树详细信息
+Switch#show spanning-tree vlan vlan-id
+
+
+N.HSRP概述
+n.HSRP的相关概念
+1.热备份路由选择协议
+  -HSRP(Hot Standby Routing Protocol)
+  -是Cisco私有协议(VRRP公有协议了解一下)
+2.HSRP组成员
+  ·两台物理路由器(一台活跃一台备份)
+  -活跃路由器
+  -备份路由器
+  -虚拟路由器
+  -其他路由器
+3.HSRP原理
+  一台活跃,一台热备,虚拟桥接,来回切换
+4.HSRP配置
+  • 配置为HSRP的成员
+  Switch(config-if)#standby group-number ip $vlanIP
+  • 配置HSRP的优先级
+  Switch(config-if)#standby group-number priority priority-value
+  • 查看HSRP摘要信息
+  Switch(config-if)#show standby brief
+  • MS1配置
+    MS1(config)#interface vlan 1
+    MS1(config-if)#ip address 192.168.1.252 255.255.255.0
+    MS1(config-if)#standby 1 ip 192.168.1.254
+    MS1(config-if)#standby 1 priority 105
+    
+  • HSRP端口跟踪
+    – 跟踪端口不可用时,HSRP优先级降低
+    – 活跃路由器可以根据线路情况自动调整
+  • HSRP占先权
+    – 优先级高的路由器重新获得转发权,恢复成为活跃路由器
+    – HSRP占先权配置
+    ()#standby group-number perrmpt

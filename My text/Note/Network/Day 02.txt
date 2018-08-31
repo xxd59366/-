@@ -1,0 +1,89 @@
+Day 02 
+
+一.数据链路层
+1.以太网
+  1)以太网MAC地址(48位,用16进制表示)
+    - 用来识别一个以太网上的某个单独的设备或一组设备
+    24比特供应商标识  24比特供应商对网卡的唯一编号
+    第八位对于目的地址:
+    0-物理地址(单播地址)
+    1-逻辑地址(组播地址)
+  2)单播 1对1
+    组播 1对多
+    广播 1对所有
+  3)帧格式
+  目的地址	6字节
+  源地址	6字节 
+  类型/长度	2字节  
+  数据		46-1500字节  
+  帧校验序列	4字节
+
+2.以太交换机
+  1)什么是交换机
+    · 交换机是用来连接局域网的主要设备
+      -交换机能够根据以太网帧中目标地址智能转发数据,工作在数据链路层
+  2)交换机的转发原理
+    - 初始状态
+    - MAC地址学习
+    - 广播未知数据帧
+    - 接受方回应
+    ·学习 ·广播 ·转发 ·更新
+  3)查看MAC地址表
+    #show mac-address-table
+3.广播域
+  1)VLAN
+    ·虚拟局域网是物理设备上连接的不受物理位置限制的用户的一个逻辑组
+    ·为什么引入VLAN
+      -交换机的所有端口默认属于同一个广播域
+      -随着接入设备的增多,网络中广播增多,降低了网络效率
+      -为了分割广播域,引入了VLAN
+    ·VLAN的作用
+      -广播控制
+      -安全性
+      -带宽利用
+      -延迟
+    ·基于端口划分的静态VLAN
+     -静态VLAN的配置
+        -创建VLAN
+        -将端口加入到相应VLAN
+        -验证
+    ·在全局模式下创建VLAN
+      ()#vlan vlan-id
+      ()#vlan vlan-name
+    ·查看VLAN配置
+      #show vlan brief
+      #show vlan id $id
+    ·删除已创建的VLAN
+      ()#no vlan 5
+    ·将端口加入VLAN
+      ()#interface f0/2
+      ()#switchport access vlan 2
+    ·批量修改接口属性
+      ()#interface range f0/1-2
+      ()#switchport access vlan 2
+4.Trunk
+  1)用于多广播域多交换机之间作为中继链路
+    ·配置Trunk
+      ()#interface 0/24
+      ()#switchport mod trunk
+      Administrative Mode  动态自动(默认)
+      Operation Mode 正在使用的模式
+      -这样的链路中两台交换机之间的广播域vlan要对应
+    ·ISL帧格式:前ISL头26字节,后CRC4字节
+    ·ISL和802.1Q标记之间的异同
+      -相同点
+       ·都是显式标记,即帧被显式标记了VLAN的信息
+      -不同点
+       ·IEEE 802.1Q是公有的标记方式,ISL是Cisco私有的
+       ·ISL采用外部标记的方法,802.1Q采用内部标记的方法
+       ·ISL标记的长度为30字节,802.1Q标记长度为4字节
+5.配置以太通道
+  1)概述:
+    ·也称为以太端口捆绑,端口聚集或以太链路聚集
+    ·以太通道为交换机提供了端口捆绑技术,允许两个交换机之间通过两个或多个端口并行连接,同时传输数据,以提供更高的带宽
+  2)配置以太网通道
+    ()#interface range fastEthernet0/10-11
+    ()#channel-group 1 mode on
+    Creating a port-channel interface Port-channel 1
+  3)查看以太网通道的配置
+    #show etherchannel summary

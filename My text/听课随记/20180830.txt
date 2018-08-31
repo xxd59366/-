@@ -1,0 +1,14 @@
+一.关于昨天(08.29) : 系统本身安全
+
+1.波波:
+NOPASSWD
+
+2.子祥:
+/usr/bin/passwd [a-zA-Z0-9]*,!/usr/bin/passwd root
+sudoers --> services
+
+3.手动从windows拷贝密钥的过程? --> win位置?
+
+二.08.30
+
+

@@ -1,0 +1,229 @@
+1. uname -a     用于查看系统内核名称、版本、节点名、硬件名、硬件平台、处理器类型
+、操作系统等信息
+2. uptime       查看系统负载情况
+3. free [-m/-g]
+	free -m  以m为单位显示当前系统中内存的使用量情况   
+4. who命令用于查看当前登入主机的用户情况
+5. last命令用于查看所有系统的登入记录
+6. history命令用于显示历史执行过的命令，格式为：'history'，'history-c'用于清空历史记录
+7. 'sosreport'命令用于收集系统配置并诊断信息后输出结论文档，格式为：'sosreport'
+8. e
+rd.break
+ctrl+x
+mount -o remount,rw /sysroot
+chroot /sysroot
+
+echo "Taren1"|passwd --stdin root
+【或passwd
+Taren1
+Taren1】
+
+touch /.autorelabel
+exit
+reboot
+
+用来修改Linux系统密码
+	'|'为管道命令符
+
+9. od	用于查看特殊格式的文件，格式为'od [选项] [文件]'
+  	参数		作用
+ 	-t a		默认字符
+ 	-t c		ASCII字符
+ 	-t o		八进制
+ 	-t d		十进制
+ 	-t x		十六进制
+ 	-t f		浮点数
+9. tr命令用于转换文本文件中的字符，格式为：'tr [原始字符] [目标字符]'
+    	如 'tr *.txt [a-z] [A-Z]'将*文本文件的内容中小写转换成大写
+10. wc命令用于统计指定文本的行数、字数、字节数，格式为'wc [参数] 文本'
+  参数		作用
+ -l		只显示行数
+ -w		只显示单词数
+ -c		只显示字节数
+	统计当前系统中的用户个数：
+  	[root@localhost boot]# wc -l /etc/passwd
+  	40 /etc/passwd
+11. cut命令通过列来提取文本字符，格式为：'cut [参数] 文本'
+  	参数		作用
+ 	-d 分隔符	指定分隔符，默认为Tab
+ 	-f		指定显示的列数
+ 	-c		单位改为字符
+
+	查看已登陆用户名：
+	[root@localhost ~]# cut -d: -f1 /etc/passwd
+
+12. diff命令用于比较多个文本文件的差异，格式为：'diff [参数] 文件'
+  参数		命令
+ -b		忽略空格引起的差异
+ -B		忽略空行引起的差异
+ -brief或-q	仅报告是否存在差异
+ -c		使用上下文输出格式
+
+	比较两个文件的差异：diff diff_A.txt diff_B.txt
+	仅显示比较后的结果，即相同或不相同：	diff -p diff_A.txt diff_B.txt
+						Files diff_A.txt and diff_B.txt differ
+	使用上下文输出的格式：	diff -c diff_A.txt diff_B.txt
+					diff_A.txt ...
+					diff_B.txt ...
+				********************************************
+					（差别）
+
+13. dd命令用于指定大小的拷贝的文件或指定转换文件，格式为"dd [参数]"。
+  参数			作用
+  if			输入的文件名称
+  of			输出的文件名称
+  bs			设置每个“块”的大小
+  count			设置要拷贝“块”的个数
+  conv=ucase		将字母从小写转换为大写
+  conv=lcase		把字符从大写转换为小写
+
+  · 将光驱复制成镜像文件：
+  [root@student ~]# dd if=/dev/cdrom of=/rhel7/dvd/Rhel-7.4.iso
+   记录了7927808+0 的读入
+   记录了7927808+0 的写出
+   4059037696字节(4.1 GB)已复制，99.7414 秒，40.7 MB/秒
+  [root@student ~]# ls /rhel7/dvd/Rhel-7.4.iso
+  /rhel7/dvd/Rhel-7.4.iso
+
+14. useradd命令用于创建新的用户，格式为：“useradd [选项] 用户名”
+  参数			作用
+  -d			指定用户的家目录(默认为/home/username)
+  -D			展示默认值
+  -e			帐号有效截至日期，格式：YYYY-MM-DD.
+  -g			指定一个初始用户组（必须已存在）
+  -G			指定一个或多个扩展用户组
+  -N			不创建与用户同名的用户组
+  -s			指定默认的Shell
+  -u			指定用户的UID
+    passwd命令用于修改用户的密码，格式为"passwd [选项] [用户名]"
+  参数			作用
+  -l			锁定用户并禁止其登陆
+  -u			解除锁定，允许用户登陆
+  --stdin		允许从标准输入修改用户密码
+  -d			使帐号无密码
+  -e			强制用户下次登陆时修改密码
+  -S			显示用户的密码状态
+    userdel命令用于删除用户所有表哥，格式为"userdel [选项] 用户名"
+  删除用户与其家目录：
+	参数			作用
+	-f			强制删除用户、家目录与其相关文件
+	-r			同时删除用户、家目录与其相关文件
+    usermod命令用于修改用户的属性，格式为"usermod [选项] 用户名"
+	参数			作用
+	-c			填写帐号的备注信息
+	-d -m			-m与-d连用，可重新指定用户的家目录并自动把旧的数据转移过去
+	-e			账户到期时间，格式"YYYY-MM-DD"
+	-g			变更所属用户组
+	-G			变更扩展用户组
+	-L			锁定用户并禁止其登陆系统
+	-U			解锁用户，允许其登陆系统
+	-s			变更默认终端
+	-u			修改用户的UID
+    groupadd命令用于创建群组，格式为："groupadd [选项] 群组名"
+	创建名称为linuxprobe的用户群组：
+	[root@Gay tom]# groupadd linuxprobe
+15. tar命令用于对文件打包压缩或解压，格式为："tar [选项] [文件]"
+	打包并压缩文件："tar -czvf 压缩包名.tar.gz 文件名"
+	解压并展开压缩包："tar -xzvf 压缩包名.tar.gz"
+		参数			作用
+		-c			创建压缩文件
+		-x			解开压缩文件
+		-t			查看压缩包内有哪些文件
+		-z			用Gzip压缩或解压
+		-j			用bzip2压缩或解压
+		-v			显示压缩或解压的过程
+		-f			目标文件名
+		-p			保留原始的权限与属性
+		-P			使用绝对路径来压缩
+		-C			指定解压到的目录
+	将/etc 目录内文件打包并通过gzip格式压缩：
+	[root@Gay /]# tar -czvf etc.tar.gz /etc/
+	将etc.tar.gz解压到/root/etc目录中：
+	[root@Gay ~]# tar -xzvf /etc.tar.gz -C /root/etc
+16. 管道命令符"|"
+	"|"的作用是将前一个命令的标准输出当作后一个命令的标准输入，格式为“命令A|命令B”。
+	如：echo 'Linuxprobe'|passwd --stdin root	使用非交互式设置用户密码，将root密码修改为Linuxprobe
+	· 管道命令符可以连用： "命令A|命令B|命令C"
+17. 重定向的蛇皮用法
+	>
+	>>
+	<
+	<<
+
+18. bash解释器还支持很多的特殊字符扩展：
+	字符			作用
+	\（反斜杠）			转义后面单个字符
+	''（单引号）			转义所有的字符
+	""（双引号）			变量依然生效
+	``（反引号）			执行命令语句
+  定义Price变量的值为5：
+  [root@DearFranX ~]# Price=5
+  输出“价格是5”：
+  [root@DearFranX ~]# echo 'Price is $Price'
+  Price is $Price
+  [root@DearFranX ~]# echo "Price is $Price"
+  Price is 5
+  输出“价格是$5”:
+  [root@DearFranX ~]# echo "Price is $$Price"
+  Price is 2546Price
+· 出错，乱码，原因为两个$冲突，需要用\来转义其后的一个$
+  [root@DearFranX ~]# echo "Price is \$$Price"
+  Price is $5
+  看内核版本：
+  [root@DearFranX ~]# echo `uname -r`
+  3.10.0-693.el7.x86_64
+
+19. 实用的PATH变量
+	· 查看$PATH变量的方法：echo $PATH
+	· 查看某个命令是“内部命令”还是“外部命令”的方法：执行“type 命令名字”
+	· $PATH 变量负责告诉bash用户要执行的命令可能存放在哪里，然后bash在这些目录里寻找命令。
+	  $PATH 中目录之间用冒号“:”隔开，用户也可自定义一些命令存放目录，比如/root/bin
+
+	· 为变量增加新的值：
+	[root@DearFranX ~]# PATH=$PATH:/root/bin
+	· 谨慎而有经验的运维人员在接手一台Linux系统后一定会在执行命令前查看下$PATH变量中是否有可疑的目录
+
+20. 重要的环境变量
+	· 查看环境变量的命令： env
+	· 变量是由固定的"变量名"与用户或系统设置的"变量值"两部分组成的，如果有需求可直接修改
+
+	变量名称			作用
+	HOME				用户的主目录“家”
+	SHELL				当前的shell是那个程序
+	HISTSIZE			历史命令记录条数
+	MAIL				邮件信箱文件
+	LANG				语系数据
+	RANDOM			随机数字
+	PS1				bash提示符
+	HISTFILESIZE		history命令储存数量
+	PATH				在路径中的目录查找执行文件
+	EDITOR			默认文本编辑器
+
+	· export命令用于将局部变量提升为全局变量，格式为："export 变量名[=变量值]"
+	假设需要一个变量"WORKDIR"让每个用户执行cd $WORKDIR都登陆到"/home/workdir"目录中
+	定义方法：
+	[root@DearFranX ~]$ WORKDIR=/home/workdir
+	查看方法：
+	[root@DearFranX ~]$ echo "$WORKDIR"
+	/home/workdir
+	创建目录：
+	[root@DearFranX ~]# mkdir /root/workdir
+	设置变量值：
+	[root@DearFranX ~]$ WORKDIR=/home/workdir
+	提升全局：
+	[root@DearFranX ~]# export WORKDIR
+	切换目录：
+	[root@DearFranX ~]# cd $WORKDIR
+
+21. 编译简单的脚本
+	格式
+	脚本声明（#!）告知系统用何种shell来解释
+	注释信息（#）对可执行语句或程序功能作介绍，可以不写
+	可执行语句：执行的具体命令
+	
+	脚本文件路径：.../Example.sh
+	sh脚本文件路径：sh Example.sh
+	source脚本文件路径：source Example.sh
+	只要脚本文件路径没有写错，sh或source都可以直接执行该脚本，但直接访问脚本路径的方式需要改权限
+
+

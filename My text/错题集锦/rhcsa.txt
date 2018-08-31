@@ -1,0 +1,15 @@
+第一次:2018.07.17
+
+一.LDAP
+1.ldap没有装sssd包
+
+2.autofs配置文件/etc/guests.misc文件书写错误
+   * -rw classroom.example.com:/home/guests/&
+ldapuser0					 ldapuser0
+
+二.权限规划
+1.共享目录创建,权限调整只看了前半句,后半句关于other的权限未做更改
+
+最终分数:290
+
+===================================================

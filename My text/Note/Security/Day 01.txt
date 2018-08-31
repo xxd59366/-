@@ -1,0 +1,129 @@
+Day 01 Linux基本防护 用户切换与提权 SSH访问控制 SELinux安全 、 SSH访问控制 SELinux安全
+
+一.Linux基本防护
+
+· 用户账号安全
+
+  1.设置账号有效日期
+  · 使用chage工具
+   -d 0   强制修改密码
+   -l     查看账户信息
+   -E yyyy-mm-dd  指定失效日期(-1取消)  失效的用户将无法登录
+  · 定义默认有效期（强制定期修改密码）
+   # cat /etc/login.defs
+   PASS_MAX_DAYS    99999                        //密码最长有效期
+   PASS_MIN_DAYS    0                            //密码最短有效期
+   PASS_MIN_LEN    5                            //密码最短长度
+   PASS_WARN_AGE    7                            //密码过期前几天提示警告信息
+   UID_MIN                  1000                //UID最小值
+   UID_MAX                  60000                //UID最大值
+    
+  2.账号的锁定/解锁
+  · 使用passwd命令
+   -l  锁定
+   -u  解锁
+   -S  查看状态
+  
+  3.修改tty登录的提示信息，隐藏系统版本(伪装登录提示)
+  · vim /etc/issue          本地登录
+  · vim /etc/issue.net      远程登录
+  
+  4.文件系统安全
+  · 程序和服务控制
+    1) 禁用非必要的系统服务
+      - 使用systemctl,chkconfig工具
+    2) 关闭执行权限
+    # mount -o remount,rw,noexec /dev/vda1 /boot/          //临时修改,永久修改需写入fstab中
+    # mount | grep boot
+    3) 关闭更新atime
+    # # mount -o remount,rw,atime /dev/vda1 /boot/          //临时修改,永久修改需写入fstab中
+    
+  5.锁定/解锁保护文件
+  · EXT3/EXT4的文件属性控制
+   - chattr,lsattr
+   · +,-,=控制方式
+   -i  不可变
+   -a  仅可追加
+   
+· 用户切换与提权
+
+  1.su切换用户身份
+  · su - [目标用户]
+  · su [-] -c "命令" [目标用户]
+  2.sudu提升执行权限
+  · 管理员预先设置执行许可
+  · 被授权用户有执行授权的命令,验证自己的口令
+  · 命令格式
+   # sudo 特权命令
+   # sudo [-u 目标用户] 特权命令
+  · 授权
+   # vim /etc/sudoers
+   或
+   # visudo
+   
+  · 允许用户useradm通过sudo方式添加/删除/修改除root以外的用户账号
+   zhangsan ALL=(ALL)      /usr/bin/systemctl
+   useradm ALL=(root)      /usr/bin/passwd,!/usr/bin/passwd root,/usr/sbin/user*,!/usr/sbin/user* root
+   
+  · 允许wheel组成员以特权执行所有命令
+   %wheel ALL=(ALL)  ALL
+   # usermod -a -G wheel zhangsan
+   
+  · 为sudo机制启用日志记录，以便跟踪sudo执行操作
+   # visudo
+   Defaults  logfile="/var/log/sudo"
+   
+· 提高SSH服务安全
+  
+  1.配置基本安全策略
+   # vim /etc/ssh/sshd_config
+    .. ..
+   Protocol 2                                          //SSH协议
+   PermitRootLogin no                                  //禁止root用户登录
+   PermitEmptyPasswords no                              //禁止密码为空的用户登录
+   UseDNS  no                                          //不解析客户机地址
+   LoginGraceTime  1m                                  //登录限时
+   MaxAuthTries  3                                      //每连接最多认证次数
+    .. ..
+   # systemctl restart sshd
+ 
+  2.针对SSH访问采用仅允许的策略，未明确列出的用户一概拒绝登录
+    # vim /etc/ssh/sshd_config
+     .. ..
+    AllowUsers zhangsan tom useradm@192.168.4.0/24            //定义账户白名单
+    ##DenyUsers  USER1  USER2                                //定义账户黑名单
+    ##DenyGroups  GROUP1 GROUP2                            //定义组黑名单
+    ##AllowGroups  GROUP1 GROUP2                            //定义组白名单
+    # systemctl restart sshd
+  · 验证SSH访问控制，未授权的用户将拒绝登录
+ 
+· SELinux安全防护
+  
+  1.SELinux概述
+  · 什么是SELinux
+    - 一套强化Linux安全的扩展模块
+    - 美国国家安全局主导开发
+  · SELinux的运作机制
+    - 集成到Linux内核(2.6及以上)
+    - 操作系统可定制的策略,管理工具
+  · SELinux策略集
+    SELINUXTYPE=targeted
+      - 推荐,仅保护最常见/关键的网络服务,其他不限制
+      - 主要软件包:
+      selinux-policy
+      selinux-policy-targeted
+      libselinux-utils
+      coreutils
+      policycoreutuilks
+      
+  2.SELinux模式控制
+    1）固定配置：修改/etc/selinux/config文件
+    · 修改kernel启动参数
+      - 添加selinux=0以禁用
+      - 添加enforcing=0 设置SELinux为允许模式
+    · 修改文件/etc/selinux/config
+      - 设置SELINUX=disabled以禁用
+      - 设置SELINUX=permissive宽松/允许模式
+      - 设置SELINUX=enforcing强制模式
+    
+  3.

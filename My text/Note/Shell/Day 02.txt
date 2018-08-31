@@ -1,0 +1,99 @@
+Day 02 Shell中的数值运算 条件测试操作 使用if选择结构
+
+一.Shell中的数值运算
+1.整数运算工具
+  1)使用expr命令
+    · 乘法运算应用'\*'转义,避免被认做通配符
+  [root@svr5 ~]# X=1234                              //定义变量X
+  [root@svr5 ~]# expr  $X  +  78                      //加法
+  1312
+  [root@svr5 ~]# expr  $X  -  78                       //减法
+  1156
+  [root@svr5 ~]# expr  $X  \*  78                      //乘法，操作符应添加\转义
+  96252
+  [root@svr5 ~]# expr  $X  /  78                      //除法，仅保留整除结果
+  15
+  [root@svr5 ~]# expr  $X  %  78                     //求模
+  64
+  
+  2)使用$[ ]或$(())表达式
+  [root@svr5 ~]# X=1234   
+  [root@svr5 ~]# echo $[X+78]
+  1312
+  [root@svr5 ~]# echo $[X-78]
+  1156
+  [root@svr5 ~]# echo $[X*78]
+  96252
+  [root@svr5 ~]# echo $[X/78]
+  15
+  [root@svr5 ~]# echo $[X%78]
+  64
+  
+  3)使用let命令
+   expr或$[ ]、$(())方式只进行运算，并不会改变变量的值；而let命令可以直接对变量值做运算再保存新的值。因此变量X=1234，在执行let运算后的值会变更；另外，let运算操作并不显示结果，但是可以结合echo命令来查看：
+    
+    [root@svr5 ~]# X=1234  
+  [root@svr5 ~]# let y=X+22
+  [root@svr5 ~]# echo $y
+  1256
+  [root@svr5 ~]# let X++;  echo $X        # X++(X=X+1)
+  [root@svr5 ~]# let X--;  echo $X        # X--(X=X-1)
+  [root@svr5 ~]# let X+=78 ; echo $X        # X+=78(X=X+78)
+  [root@svr5 ~]# let X-=78 ; echo $X     # X-=78(X=X-78)
+  [root@svr5 ~]# let X*=78 ; echo $X     # X*=78(X=X*78)
+  [root@svr5 ~]# let X/=78 ; echo $X     # X/=78(X=X/78)
+  [root@svr5 ~]# let X%=78 ; echo $X     # X%=78(X=X%78)
+  
+  4)bc交互式运算
+  [root@svr5 ~]# bc 
+  12.34+56.78                                        //加法
+  69.12
+  12.34-56.78                                        //减法
+  -44.44
+  12.34*56.78                                        //乘法
+  700.66
+  12.34/56.78                                        //除法
+  0
+  quit                                              //退出交互计算器
+  
+  5)bc非交互运算
+  [root@svr5 ~]# echo 'scale=4;12.34+5.678' | bc
+  18.018
+  [root@svr5 ~]# echo 'scale=4;12.34*5.678' | bc 
+  70.0665
+  [root@svr5 ~]# echo 'scale=4;12.34/5.678' | bc 
+  2.1733
+
+2.条件测试
+
+· 子串判断 ==   !=    -z   !-z
+· 数字判断
+    -eq equal
+    -ne not equal
+    -gt greater than
+    -ge greater or equal
+    -lt less than
+    -le less or equal
+· 文件或目录判断
+    -e exists     是否存在
+    -f file       是否为文件且存在
+    -d directory  是否为目录且存在
+    -r read       是否可读
+    -w write      是否可写
+    -x execute    是否可执行
+    
+  1)'==' 比较两个字符串是否相同
+  2）!= 比较两个字符串是否不相同
+  3）一行执行多条命令的情况
+    # A && B                        //仅当A命令执行成功，才执行B命令
+    # A || B                        //仅当A命令执行失败，才执行B命令
+    # A ;  B                        //执行A命令后执行B命令，两者没有逻辑关系
+    # A && B || C                   //思考？
+  4) -z 检查变量的值是否未设置（空值）
+    [root@svr5 ~]# var1="nb" ; var2=""
+    [root@svr5 ~]# [ -z "$var1" ] && echo "空值" || echo "非空值"
+    非空值
+    [root@svr5 ~]# [ -z $var2 ] && echo "空值" || echo "非空值"
+    空值                                      //变量var2已设置，但无任何值，视为空
+    [root@svr5 ~]# [ ! -z $var1 ]                //测试var1是否为非空
+   还有一个-n可以测试变量是否不为空（相当于! -z）。

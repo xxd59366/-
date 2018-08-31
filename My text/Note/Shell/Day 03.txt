@@ -1,0 +1,112 @@
+Day 03 循环结构 case语句 、 函数及中断控制
+
+一.for循环
+
+1.不能代入变量的格式
+for i in {1..100}
+
+ex:
+for i in {1..10}
+do
+        echo "$i"
+done
+
+2.可以代入变量的格式
+for i in `seq n`
+for i in `ls *.txt`
+
+ex:
+for i in `cat /root/user.txt
+do
+     useradd $i
+     echo 123456 | passwd –stdin $i
+done
+
+· seq函数技巧: -s
+
+3.c函数格式
+for((i=0;i<10;i++))
+
+ex:
+for ((i=1;i<=5;i++))
+do
+   echoi $i
+done
+
+
+二.while循环
+
+1.死循环一般格式
+
+ex:
+while :
+do
+        echo "hello world"
+done
+
+三.case分支编写脚本
+
+case 变量 in
+模式1)
+	命令序列;;
+模式2)
+	命令序列;;
+*)
+	默认命令续写
+esac
+
+四.函数
+
+1.格式
+  1)function 函数名 {
+  	命令序列
+	....
+  }
+  2)函数名() {
+  	命令序列
+	....
+  }
+  
+2.函数调用
+# mycd(){
+  mkdir /test
+  cd /test
+}
+
+#mycd
+
+
+3.编写mycolor.sh脚本
+
+	1）任务需求及思路分析
+		用户在执行时提供2个整数参数，这个可以通过位置变量$1、$2读入。
+		调用函数时，将用户提供的两个参数传递给函数处理。
+		颜色输出的命令:echo -e "\033[32mOK\033[0m"。
+		3X为字体颜色，4X为背景颜色。
+
+	2）根据实现思路编写脚本文件
+		[root@svr5 ~]# vim mycolor.sh
+		#!/bin/bash
+		cecho() {
+				echo –e "\033[$1m$2\033[0m"
+		}
+		cecho 32 OK
+		cecho 33 OK
+		cecho 34 OK
+		cecho 35 OK
+		[root@svr5 ~]# chmod +x mycolor.sh
+
+4.Shell版本的fork炸弹(一键死机)
+#!/bin/bash
+.(){
+.|.&
+}
+.
+
+5.中断与退出
+
+
+通过break、continue、exit在Shell脚本中实现中断与退出的功能。
+break可以结束整个循环；continue结束本次循环，进入下一次循环；exit结束整个脚本
+
+

@@ -1,0 +1,163 @@
+Day 03 Nginx调度器 Nginx常见问题
+
+一.Nginx反向代理
+
+1.Nginx调度算法
+	- 轮询(默认的):逐一循环调度
+	- weight:指定轮询几率,权重值和访问比率成正比
+	- ip_hash:根据客户端IP分配固定的后端服务器
+
+#######################################################
+
+#使用upstream定义后端服务器集群，集群名称任意(如webserver)
+#使用server定义集群中的具体服务器和端口
+upstream webserver {
+		    ip_hash;								//相同客户访问相同服务器
+                server 192.168.2.100:80 max_fails=2 fail_timeout=30;
+                server 192.168.2.200:80;
+										server 192.168.2.101 down;
+        }
+.. ..
+server {
+        listen        80;
+        server_name  localhost;
+            location / {
+								#通过proxy_pass将用户的请求转发给webserver集群
+            proxy_pass http://webserver;
+        }
+}
+
+###########################################################
+
+2.支持4层TCP/UDP代理的Nginx代理
+
+  1)部署nginx服务器
+		编译安装--with-stream
+
+###########################################################
+
+· 配置
+
+# vim /usr/local/nginx/conf/nginx.conf
+
+stream {
+	upstream backend { 
+		server 192.168.2.100:22;
+		server 192.168.2.200:22;
+	} 
+	server {
+		listen 12345;
+		proxy_connect_timeout 1s;
+		proxy_timeout 3s;
+		proxy_pass backend;
+	}
+}
+
+http {
+.. ..
+}
+
+· 验证
+
+# ssh root@192.168.4.5 -p 12345
+
+#############################################################
+
+二.Nginx常见问题处理
+
+1.压力测试与服务器优化
+
+· 压力测试
+
+# ab -n 2000 -c 2000 http://192.168.4.5/
+
+报错: socket: Too many open files
+
+# vim /usr/local/nginx/conf/nginx.conf
+worker_processes  1;       #与CPU核心数量有关
+events {
+    worker_connections  66666;     #每个worker最大并发量
+}
+
+# ulimit -a
+# ulimit -Hn 100000
+# ulimit -Sn 100000
+# vim /etc/security/limits.conf
+
+http {
+client_header_buffer_size    1k;        //默认请求包头信息的缓存    
+large_client_header_buffers  4 4k;        //大请求包头部信息的缓存个数与容量
+.. ..
+}
+
+===================================================
+
+2.浏览器本地静态缓存数据
+· 服务器缓存设置
+location ~* \.(jpg|jpeg|gif|png|css|js|ico|xml)$ {
+		expires        30d;            //定义客户端缓存时间为30天
+}
+
+· 报错页面设置
+# vim /usr/local/nginx/conf/nginx.conf
+.. ..
+	error_page   404  /404.html;    //自定义错误页面
+.. ..
+
+# vim /usr/local/nginx/html/404.html  
+
+====================================================
+
+3.查看服务器状态信息
+	· 编译安装时使用--with-http_stub_status_module开启状态页面模块
+		# ./configure   \
+		> --with-http_ssl_module                        //开启SSL加密功能
+		> --with-stream                                //开启TCP/UDP代理模块
+		> --with-http_stub_status_module                //开启status状态页面
+
+	· 修改配置文件
+		# vim /usr/local/nginx/conf/nginx.conf
+		 location /status {
+       stub_status on;
+     }
+
+	· 验证
+		# curl  http://192.168.4.5/status
+		Active connections: 1 
+		server accepts handled requests
+		 10 10 3 
+		Reading: 0 Writing: 1 Waiting: 0
+	
+		Active connections：当前活动的连接数量。
+		Accepts：已经接受客户端的连接总数量。
+		Handled：已经处理客户端的连接总数量（一般与accepts一致，除非服务器限制了连接数量）。
+		Requests：客户端发送的请求数量。
+		Reading：当前服务器正在读取客户端请求头的数量。
+		Writing：当前服务器正在写响应信息的数量。
+		Waiting：当前多少客户端在等待服务器的响应。
+
+4.对页面进行压缩处理
+	1）修改Nginx配置文件
+	[root@proxy ~]# cat /usr/local/nginx/conf/nginx.conf
+	http {
+	.. ..
+	gzip on;                            //开启压缩
+	gzip_min_length 1000;                //小文件不压缩
+	gzip_comp_level 4;                //压缩比率
+	gzip_types text/plain text/css application/json application/x-javascript text/xml application/xml application/xml+rss text/javascript;
+		                                  //对特定文件压缩，类型参考mime.types
+	.. ..
+	}
+
+5.服务器内存缓存
+
+	1）如果需要处理大量静态文件，可以将文件缓存在内存，下次访问会更快。
+	http { 
+	open_file_cache          max=2000  inactive=20s;
+		      open_file_cache_valid    60s;
+		      open_file_cache_min_uses 5;
+		      open_file_cache_errors   off;
+	//设置服务器最大缓存2000个文件句柄，关闭20秒内无请求的文件句柄
+	//文件句柄的有效时间是60秒，60秒后过期
+	//只有访问次数超过5次会被缓存
+	} 

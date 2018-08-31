@@ -1,0 +1,131 @@
+Day 05 Tomcat服务器 Tomcat应用案例 、 Varnish代理服务器
+
+一.安装部署Tomcat服务器
+
+1.部署环境
+· 使用RPM安装JDK环境
+# yum –y install  java-1.8.0-openjdk                //安装JDK
+# yum -y install java-1.8.0-openjdk-headless        //安装JDK
+# java -version                                    //查看JAVA版本
+· 安装Tomcat（apache-tomcat-8.0.30.tar.gz软件包，在lnmp_soft中有提供）
+# tar -xf  apache-tomcat-8.0.30.tar.gz
+# mv apache-tomcat-8.0.30  /usr/local/tomcat
+# ls /usr/local/tomcat
+# /usr/local/tomcat/bin/startup.sh			//启动服务
+· 验证
+# ss -antulp | grep java					//查看java监听的端口,正确的应该有3个端口
+8080
+8009
+8005
+
+二.使用Tomcat部署虚拟主机
+1.修改server.xml配置文件，创建两个域名的虚拟主机，修改如下两个参数块：
+# cat /usr/local/tomcat/conf/server.xml
+<Host name="www.a.com" appBase="a" unpackWARS="true" autoDeploy="true">
+</Host>
+<Host name="www.b.com" appBase="b" unpackWARS="true" autoDeploy="true">
+</Host>
+
+2.修改www.b.com网站的首页目录为base
+
+# vim /usr/local/tomcat/conf/server.xml
+.. ..
+<Host name="www.a.com" appBase="a" unpackWARS="true" autoDeploy="true">
+</Host>
+<Host name="www.b.com" appBase="b" unpackWARS="true" autoDeploy="true">
+<Context path="" docBase="base" reloadable="true"/>
+</Host>
+
+# mkdir  /usr/local/tomcat/b/base
+# echo "BASE" > /usr/local/tomcat/b/base/index.html
+# /usr/local/tomcat/bin/shutdown.sh
+# /usr/local/tomcat/bin/startup.sh
+
+3.跳转 : 当用户访问http://www.a.com/test打开/var/www/html目录下的页面
+
+# vim /usr/local/tomcat/conf/server.xml
+.. ..
+<Host name="www.a.com" appBase="a" unpackWARS="true" autoDeploy="true">
+<Context path="/test" docBase="/var/www/html/" />
+</Host>
+<Host name="www.b.com" appBase="b" unpackWARS="true" autoDeploy="true">
+<Context path="" docBase="base" />
+</Host>
+
+# echo "Test" > /var/www/html/index.html
+# /usr/local/tomcat/bin/shutdown.sh
+# /usr/local/tomcat/bin/startup.sh
+
+验证:
+# firefox http://www.a.com:8080/test    
+//返回/var/www/html/index.html的内容
+//注意，访问的端口为8080
+
+4.配置Tomcat支持SSL加密网站
+
+· 创建加密用的私钥和证书文件
+# keytool -genkeypair -alias tomcat -keyalg RSA -keystore /usr/local/tomcat/keystore
+//-genkeypair     生成密钥对
+//-alias tomcat     密钥别名
+//-keyalg RSA     定义密钥算法为RSA算法
+//-keystore         定义密钥文件存储在:/usr/local/tomcat/keystore
+
+# vim /usr/local/tomcat/conf/server.xml
+<Connector port="8443" protocol="org.apache.coyote.http11.Http11NioProtocol"
+maxThreads="150" SSLEnabled="true" scheme="https" secure="true"
+keystoreFile="/usr/local/tomcat/keystore" keystorePass="123456" clientAuth="false" sslProtocol="TLS" />
+//备注，默认这段Connector被注释掉了，打开注释，添加密钥信息即可
+
+5.
+
+
+二.Varnish
+1.使用Varnish加速Web
+· nginx [代理]
+· varnish [代理]+缓存
+· DNS分离解析
+
+###############################################################################
+
+1)构建web服务器并创建测试页面:
+
+httpd或nginx
+
+2)部署Varnish缓存服务器(192.168.4.5)
+
+· 编译安装Varnish
+//安装依赖包
+# yum -y install gcc readline-devel
+# yum -y install ncurses-devel
+# yum -y install pcre-devel
+# yum -y install \
+python-docutils-0.11-0.2.20130715svn7687.el7.noarch.rpm
+
+//安装varnish
+# useradd -s /sbin/nologin varnish                //创建账户
+# tar -xf varnish-5.2.1.tar.gz
+# cd varnish-5.2.1
+# ./configure
+# make && make install
+
+3)复制启动脚本及配置文件
+
+· 注意: 这里的etc不是根下的etc
+
+[root@proxy varnish-5.2.1]# cp  etc/example.vcl   /usr/local/etc/default.vcl
+# vim  /usr/local/etc/default.vcl
+backend default {
+     .host = "192.168.2.100";
+     .port = "80";
+ }
+
+3)其他操作
+· 查看varnish日志
+# varnishlog                     //varnish详细日志
+# varnishncsa                    //简洁访问日志
+
+· 更新缓存数据，在后台web服务器更新页面内容后，用户访问代理服务器看到的还是之前的数据，说明缓存中的数据过期了需要更新（默认也会自动更新，但非实时更新）
+
+# varnishadm  
+varnish> ban req.url ~ .*
+//清空缓存数据，支持正则表达式

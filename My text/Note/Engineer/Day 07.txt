@@ -1,0 +1,173 @@
+Day 07 构建安全加密的Web服务器 基础邮件服务 分区工具
+
+一.构建安全加密的Web服务器
+
+虚拟机Server0
+1.部署网站证书
+# cd /etc/pki/tls/certs/
+# wget http://classroom.example.com/pub/tls/certs/server0.crt
+# ls
+
+2.部署根证书
+# wget http://classroom.example.com/pub/example-ca.crt
+# ls
+
+3.部署私钥
+# cd /etc/pki/tls/private
+# wget http://classroom.example.com/pub/tls/private/server0.key
+# ls
+
+4.安装软件包mod_ssl,提供安全支持
+# yum install -y mod_ssl
+
+5.修改配置文件
+# vim /etc/httpd/conf.d/ssl.conf
+:set nu	//添加行号
+
+ 59 DocumentRoot "/var/www/html"
+ 60 ServerName www0.example.com:443
+//指定网站证书的位置
+100 SSLCertificateFile /etc/pki/tls/certs/server0.crt
+//指定私钥的位置
+107 SSLCertificateKeyFile /etc/pki/tls/private/server0.key
+//指定根证书的位置
+122 SSLCACertificateFile /etc/pki/tls/certs/example-ca.crt
+
+6.重启httpd服务
+7.验证
+# firefox https://www0.example.com
+ 我了解风险 --> 添加例外 --> 确认添加例外
+
+====================================================
+
+二.基础邮件服务
+
+1.种类
+· 本域邮件
+· 外域邮件
+
+· 电子邮件服务器的基本功能
+ - 为用户用户提供电子邮件存储空间(用户名@域名)
+ - 处理用户发出的邮件(SMTP) ---- 传递给收件服务器
+ - 处理用户收到的邮件(pop3 IMAP) ---- 投递到邮箱
+
+· mail命令发信/收信
+//发信
+ - mail -s '标题' -r 发件人 收件人[@收件域]
+//收信
+ - mail [-u]
+
+#####################################################################
+
+虚拟机Server0
+1.安装postfix包
+# yum -y install postfix
+# rpm -q postfix
+
+2.修改配置文件
+# vim /etc/postfix/main.cf
+:set nu	//添加行号
+
+ 99 myorigin = server0.example.com		//默认补全的域名后缀
+116 inet_interfaces = all			//允许所有人使用邮件服务
+164 mydestination = server0.example.com	//判断为本域邮件
+
+3.重启服务
+# systemctl restart postfix
+
+4.创建本地用户进行收发邮件
+# useradd yg	//杨过
+# useradd gg	//姑姑
+
+&1 //查看编号为1
+&q //退出
+
+=====================================================
+
+三.分区工具fdisk,parted
+
+· fdisk分区只能分4个主分区
+· fdisk分区每个分区最大只能是2T
+· parted可以分超过4个主分区（128），分区大小可以大于2T
+
+· parted分区工具
+ - parted分区首先要选择分区的类型msdos,gpt模式
+ - msdos就是fdisk使用的模式
+
+# parted /dev/vdb
+(parted) mktable gpt	//指定分区模式
+(parted) print 		//查看分区表信息
+(parted) mkpart		//划分新的分区
+分区名称？  [ ]? nsd		//分区名称
+文件系统类型？  [ext2]? ext4	//分区文件系统,未实装
+起始点？ 0                                                                
+结束点？ 2G 
+警告: The resulting partition is not properly aligned for best performance.	//需要引导空间
+忽略/Ignore/放弃/Cancel? Ignore           //选择忽略                              
+(parted) print                                                            
+Model: Virtio Block Device (virtblk)
+Disk /dev/vdb: 10.7GB
+Sector size (logical/physical): 512B/512B
+Partition Table: gpt
+Disk Flags: 
+
+Number  Start   End     Size    File system  Name  标志
+ 1      17.4kB  2000MB  2000MB               nsd
+
+(parted) unit GB		//选择显示容量单位为GB
+(parted) mkpart                                                           
+分区名称？  [ ]?                                                           
+文件系统类型？  [ext2]? ext4                                                   
+起始点？ 2G                                                               
+结束点？ 4G                                                               
+(parted) print                                                            
+Model: Virtio Block Device (virtblk)
+Disk /dev/vdb: 10.7GB
+Sector size (logical/physical): 512B/512B
+Partition Table: gpt
+Disk Flags: 
+
+Number  Start   End     Size    File system  Name  标志
+ 1      0.00GB  2.00GB  2.00GB               nsd
+ 2      2.00GB  4.00GB  2.00GB
+
+(parted)  quit
+
+# lsblk
+NAME   MAJ:MIN RM  SIZE RO TYPE MOUNTPOINT
+vda    253:0    0   10G  0 disk 
+└─vda1 253:1    0   10G  0 part /
+vdb    253:16   0   10G  0 disk 
+├─vdb1 253:17   0  1.9G  0 part 
+└─vdb2 253:18   0  1.9G  0 part 
+
+=====================================================
+
+四.交换空间
+· 相当于虚拟内存
+  - 当物理内存不够用时,使用磁盘空间来模拟内存
+  - 在一定程度上缓解内存不足的问题
+
+  - 交换分区:以空闲分区充当的交换空间
+  - 交换文件:以文件模拟的设备充当的交换空间
+
+1.创建交换空间
+
+  1)前提:要有空闲的分区
+  2)格式化文件系统
+	# mkswap /dev/vdb1
+  3)启用交换空间
+	# swapon /dev/vdb1
+  4)查看启用的交换空间
+	# swapon -s
+  5)停用交换空间
+	# swapoff /dev/vdb1
+
+· 交换空间开机自动挂载
+# vim /etc/fstab
+/dev/vdb1 swap swap defaults 0 0
+/dev/vdb2 swap swap defaults 0 0
+# swapon -a
+# swapon -s
+
+

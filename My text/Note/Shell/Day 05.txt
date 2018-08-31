@@ -1,0 +1,58 @@
+Day 05 
+
+一.sed工具
+1.sed工具选项
+	-n 屏蔽默认输出
+	-r 让sed支持扩展正则
+	-i sed直接修改源文件,默认sed只是通过内存临时修改文件,源文件无影响
+# sed -n '1p' /etc/hosts
+
+sed -n 'p' a.txt  												//输出所有行
+sed -n '4p' a.txt													//输出第四行
+sed -n '4,7p' a.txt												//输出4~7行
+sed -n '4,+10p' a.txt												//输出第4行和后面10行
+sed -n '/^bin/p' a.txt												//输出以bin开头的行
+sed -n '$=' a.txt													//输出总共的行数
+sed '3,5d' a.txt													//删除第3-5行
+sed '/xml/d' a.txt												//删除包含xml的行
+sed '/xml/!d' a.txt												//删除不含xml的行
+sed '/^install/d' a.txt												//删除以install开头的行
+sed '$d' a.txt													//删除文件最后一行
+sed '/^$/d' a.txt													//删除空行
+sed 's/2017/xxyy/' a.txt								                         //替换第一个
+sed 's/2017/xxyy/2' a.txt							                         //替换前两个
+sed 's/2017/xxyy/g' a.txt							                         //替换全部
+sed 's#/bin/bash#/sbin/sh#' passwd		                                                  //替换/bin/bash为/sbin/sh
+sed '4,7s/^/#/' a.txt										             //加注释
+sed 's/^#an/an/' a.txt									//去注释
+
+· 将文件中每行的第一个、倒数第1个字符互换
+思路:每行文本拆分为“第1个字符”、“中间的所有字符”、“倒数第1个字符”三个部分，然后通过替换操作重排顺序为“3-2-1”
+sed -r 's/^(.)(.*)(.)$/\3\2\1/' nssw.txt
+
+sed [选项] '条件指令' 文件
+
+-r
+-n
+-i
+
+条件: 行号,/正则/,没有条件
+
+指令: p,d,s,a,i,c
+i:在指定的行之前插入文本 insert
+a:在指定的行之后追加文本 append
+c:替换指定的行
+
+sed '2c xxx' a.txt
+
+sed 'r /etc/hosts' a.txt		//读取hosts中的内容到a.txt中
+tips:a.txt一定要有内容,不能是空白文件,哪怕一个空格也可以
+
+2.sed复制剪切
+· 基本动作
+  -H: 模式空间 ---- 追加 ----> 保持空间
+  -h: 模式空间 ---- 覆盖 ----> 保持空间
+  -G: 保持空间 ---- 追加 ----> 模式空间
+  -g: 保持空间 ---- 覆盖 ----> 模式空间
+
+

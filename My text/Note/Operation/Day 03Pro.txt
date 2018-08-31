@@ -1,0 +1,2 @@
+1.max_fails=20 fail_timeout=200;验证
+2.nginx开启4层反向代理升级安装步骤是否一致?
