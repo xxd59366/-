@@ -6442,3 +6442,992 @@ backend default {
 # varnishadm  
 varnish> ban req.url ~ .*
 //清空缓存数据，支持正则表达式
+
+========================================================================
+
+
+Day 06 版本控制 SVN基础 实战案例 、 RPM打包 
+
+一.Subversion基本操作(SVN)
+
+1.什么是Subversion
+· Subversion是一个自由/开源的版本控制系统
+	- 在SVN管理下,文件和目录可以超越时空
+	- SVN允许你数据回复到早期版本或者检查数据修改的历史
+	- 允许你和别人协作文档并跟踪所做的修改
+	
+运维工作中:
+shell代码,配置文件等同步
+
+2.Repository--仓库(repo)
+· 客户端
+	- 命令行
+	- 图形
+· 通信方式
+	- 本地访问
+	- SVN服务器
+	- Web服务
+· 版本库
+	- 版本库是版本控制的核心
+	- 任意数量客户端
+	- 客户端通过写数据库分享代码
+· SVN特点
+	- 记录每一次改变
+	
+3.安装SVN服务器
+1)yum安装
+# yum -y install subversion
+
+2)创建版本库
+# mkdir /var/svn
+# svnadmin create /var/svn/project
+# ls /var/svn/project/
+conf/  db/  format  hooks/  locks/  README.txt
+
+3)本地导入初始化数据
+# cd /usr/lib/systemd/system
+$svn import . file:///var/svn/project/ -m "Init Data"
+
+4)修改配置文件,创建账户和密码
+
+# vim /var/svn/project/conf/svnserve.conf
+· 注: 后面的几行前面不能有空格
+//19行,匿名权限
+anon-access = none
+//20行,有效账户可写
+auth-access = write
+//27行,密码文件
+password-db = passwd
+//34行,ACL访问控制列表
+authz-db = authz
+
+# vim /var/svn/project/conf/passwd
+.. ..
+[users]
+//用户名和密码
+harry = 123456
+tom = 123456
+
+# cat /var/svn/project/conf/authz
+//定义ACL访问控制
+[/]
+harry = rw                     用户对项目根路径可读可写
+tom = rw
+
+5)启动服务
+# svnserve -d  -r /var/svn/project
+# netstat -ntulp | grep svnserve
+tcp        0      0 0.0.0.0:3690    0.0.0.0:*    LISTEN      4043/svnserve
+备注：启动服务也可以使用svnserve -d启动，但客户端访问时需要指定绝对路径（svn://服务器IP/var/svn/project）
+
+4.客户端测试(192.168.2.200)
+1)将服务器上的代码下载到本地
+# cd /tmp
+# svn --username harry --password 123456 \
+co svn://192.168.2.100/ code
+//建立本地副本,从服务器192.168.2.100上co下载代码到本地code目录
+//用户名harry,密码123456
+
+# cd /tmp/code
+# ls
+# vim user.slice                               //挑选任意文件修改内容
+# svn ci -m "modify user"                      //将本地修改的数据同步到服务器
+
+# svn update                                   //将服务器上新的数据同步到本地
+# svn info svn://192.168.2.100                 //查看版本仓库基本信息
+# svn log svn://192.168.2.100                  //查看版本仓库的日志
+
+# echo "test" > test.sh                        //本地新建一个文件
+# svn ci -m "new file"                         //提交失败,该文件不被svn管理
+# svn add test.sh                              //将文件或目录加入版本控制
+# svn ci -m "new file"                         //再次提交,成功
+
+# svn mkdir subdir                             //创建子目录
+# svn rm timers.target                         //使用svn删除文件
+# svn ci -m "xxx"                              //提交一次代码
+# svn mkdir
+
+# vim umount.target                            //任意修改本地的一个文件
+# svn diff                                     //查看所有文件的差异
+# svn diff umount.target                       //仅查看某一个文件的差异
+# svn cat svn://192.168.2.100/reboot.target    //查看服务器文件的内容
+
+//删除文件所有内容,但未提交
+# sed -i 'd' tmp.mount
+//还原tmp.mount文件
+# svn revert tmp.mount
+
+//任意删除若干文件
+# rm -rf *.target
+//还原
+# svn update
+
+//修改本地副本中的代码文件
+# sed -i '1a #test###' tuned.service
+//提交代码
+# svn ci  -m  "xxx"
+//将文件从版本7还原到版本2
+# svn merge -r7:2    tuned.service    
+
+
+二.使用Subversion协同工作
+1.多人协同工作
+web1:
+# cd /tmp
+# svn --username tom --password 123456 \
+> co svn://192.168.2.100/ code
+web2:
+# cd /tmp
+# svn --username harry --password 123456 \
+> co svn://192.168.2.100/ code
+
+1)harry和tom修改不同的文件
+[root@web1 mycode]# sed -i "3a ###harry modify#####"  tmp.mount
+[root@web1 mycode]# svn ci -m  "has modified"
+[root@web2 mycode]# sed -i "3a ###tom modify#####"  umount.target
+[root@web2 mycode]# svn ci -m "has modified"
+[root@web2 mycode]# svn update
+[root@web1 mycode]# svn update
+
+2)harry和tom修改相同文件的不同行
+[root@srv5 ~]# cd harry
+[root@web1 mycode]# sed -i "3a ###harry modify#####" user.slice
+[root@web1 mycode]# svn ci -m  "modified"
+[root@web2 mycode]# sed -i "6a ###tom  modify#####"  user.slice
+[root@web2 mycode]# svn ci -m "modified"        //提交失败
+Sending        svnserve
+Transmitting file data .svn: Commit failed (details follow):
+svn: File '/user.slice' is out of date（过期）
+[root@web2 mycode]# svn update                    //提示失败后，先更新再提交即可
+[root@web2 mycode]# svn ci -m "modified"        //提交成功
+Sending        user.slice
+Transmitting file data .
+
+3)harry和tom修改相同文件的相同行
+[root@web1 mycode]# sed  -i  '1c [UNIT]' tuned.service
+[root@web1 mycode]# svn ci -m "modified"
+[root@web2 mycode]# sed  -i  '1c [unit]' tuned.service
+[root@web2 mycode]# svn ci -m "modified"
+Sending        tuned.service
+Transmitting file data .svn: Commit failed (details follow):
+svn: File '/tuned.service' is out of date(过期)
+[root@web2 mycode]# svn update                    //出现冲突，需要解决
+Conflict discovered in 'tuned.service'.
+Select: (p) postpone, (df) diff-full, (e) edit,
+        (mc) mine-conflict, (tc) theirs-conflict,
+        (s) show all options:p                    //选择先标记p，随后解决
+[root@web2 mycode]# ls
+tuned.service   tuned.service.mine        tuned.service.r10    tuned.service.r9
+[root@web2 mycode]# mv tuned.service.mine tuned.service
+[root@web2 mycode]# rm  -rf  tuned.service.r10 tuned.service.r9
+[root@web2 mycode]# svn ci -m "modified"    //解决冲突
+
+2.使用dump指令备份版本库数据
+
+# svnadmin dump /var/svn/project > project.bak  //备份
+* Dumped revision 0.
+* Dumped revision 1.
+* Dumped revision 2.
+* Dumped revision 3.
+* Dumped revision 4.
+* Dumped revision 5.
+* Dumped revision 6.
+* Dumped revision 7.
+* Dumped revision 8.
+* Dumped revision 9.
+* Dumped revision 10.
+* Dumped revision 11.
+# svnadmin create /var/svn/project2                  //新建空仓库
+# svnadmin load /var/svn/project2 < project.bak      //还原
+
+
+三.制作nginx的RPM包
+· 什么是RPM--本质上是压缩包
+· 制作RPM包
+1.安装rpm-build软件包
+# yum -y install rpm-build
+· 生成rpmbuild目录结构
+# rpmbuild -ba nginx.spec                      //会报错,没有文件或目录
+# ls /root/rpmbuild                            //自动生成的目录结构
+BUILD  BUILDROOT  RPMS  SOURCES  SPECS  SRPMS
+//准备工作,将源码复制到SOURCES目录
+# cp nginx-1.12.2.tar.gz /root/rpmbuild/SOURCES/
+//创建并修改SPEC配置文件
+# vim /root/rpmbuild/SPECS/nginx.spec
+
+Name:nginx        
+Version:1.12.2
+Release:    10
+Summary: Nginx is a web server software.
+    
+License:GPL    
+URL:    www.test.com    
+Source0:nginx-1.12.2.tar.gz
+
+#BuildRequires:    
+#Requires: 
+   
+%description
+nginx [engine x] is an HTTP and reverse proxy server.
+
+%prep
+%setup –q                            //自动解压源码包，并cd进入目录
+
+%build
+./configure
+make %{?_smp_mflags}
+
+%install
+make install DESTDIR=%{buildroot}
+
+cp /root/rpmbuild/SPECS/nginx.sh %{buildroot}/usr/local/nginx/    
+##注意，cp非必须操作，注意，这里是将一个脚本拷贝到安装目录，必须提前准备该文件
+
+%files
+%doc
+/usr/local/nginx/*            //对哪些文件与目录打包
+
+%changelog
+
+2.rombuild创建RPM软件包
+# rpmbuild -ba /root/rpmbuild/SPECS/nginx.spec
+# ls /root/rpmbuild/RPMS/x86_64/nginx-1.12.2-10.x86_64.rpm
+# rpm -qpi RPMS/x86_64/nginx-1.12.2-10.x86_64.rpm
+# rpm -ivh RPMS/x86_64/nginx-1.12.2-10.x86_64.rpm 
+# rpm -qa |grep nginx
+# /usr/local/nginx/sbin/nginx
+# curl http://127.0.0.1/
+
+三.git的使用
+git
+git clone
+git add
+git commit -m "xx"
+gitp push
+
+在本机上同步git
+git clone git clone https://github.com/redhatedu/course
+cd course
+git pull
+
+
+=========================================================================
+
+Day 07 VPN服务器  NTP时间同步  PSSH远程工具
+
+一.VPN服务器
+1.VPN概述
+· Virtual Private Network(虚拟专用网络)
+  - 在公用网络上建立专用私有网络,进行加密通讯
+  - 多用于为集团公司的各地子公司建立连接
+  - 连接完成后,各个地区的子公司可以像局域网一样通讯
+  - 在企业中由广泛应用
+  - 偶尔可以用于翻墙
+  - 目前主流的VPN技术(GRE,PPTP,L2TP+IPSec,SSL)
+
+2.GRE模块VPN
+1)启用GRE模块(client和proxy都需要操作，下面以client为例)
+    1.查看计算机当前加载的模块
+     # lsmod                               //显示模块列表
+     # lsmod | grep ip_gre                 //确定是否加载了gre模块
+    2.加载模块ip_gre
+     # modprobe ip_gre
+     # lsmod | grep ip_gre
+    3.查看模块信息
+     # modinfo ip_gre
+
+2)Client主机创建VPN隧道
+    1.创建隧道
+     # ip tunnel add tun0 mode gre \
+     > remote 201.1.2.5 local 201.1.2.10
+     //ip tunnel add 创建隧道(隧道名称为tun0),ip tunnel help 可以查看帮助
+     //mode设置隧道使用gre模式
+     //local后面跟本机的IP地址,remote后面是与其他主机建立隧道的对方ip地址
+     //ip link 查看
+    2.启用该隧道(类似于设置网卡ip)
+     # ip link show
+     # ip link set tun0 up                 //设置up
+     # ip link show
+    3.为VPN配置隧道IP地址
+     # ip addr add 10.10.10.10/24 peer 10.10.10.5/24 \
+     > dev tun0
+      //为隧道tun0设置本地IP地址(10.10.10.10/24)
+      //隧道对面的主机ip的ip隧道为10.10.10.5/24
+     # ip a s                              //查看ip地址
+    4.关闭防火墙和selinux
+     # firewall-cmd --set-default-zone=trusted
+
+3)Proxy主机创建VPN隧道
+    1.同上步骤开启通道: ping 10.10.10.10 可通
+    2.开启路由转发,关闭防火墙
+     # echo "1" > /proc/sys/net/ipv4/ip_forward
+     # firewall-cmd --set-default-zone=trust
+     
+3.创建PPTP VPN
+
+· 部署VPN服务器
+1)安装软件包
+[root@proxy ~]# yum localinstall pptpd-1.4.0-2.el7.x86_64.rpm
+[root@proxy ~]# rpm -qc pptpd
+/etc/ppp/options.pptpd
+/etc/pptpd.conf
+/etc/sysconfig/pptpd
+
+2)修改配置文件
+[root@proxy ~]# vim /etc/pptpd.conf
+.. ..
+localip 201.1.2.5                                    //服务器本地IP
+remoteip 192.168.3.1-50                            //分配给客户端的IP池
+[root@proxy ~]# vim /etc/ppp/options.pptpd
+require-mppe-128                                    //使用MPPE加密数据
+ms-dns 8.8.8.8                                    //DNS服务器
+[root@proxy ~]# vim /etc/ppp/chap-secrets            //修改账户配置文件
+jacob           *               123456      *
+//用户名    服务器标记    密码    客户端
+[root@proxy ~]# echo "1" > /proc/sys/net/ipv4/ip_forward    //开启路由转发
+
+3)启动服务
+# systemctl start pptpd
+# systemctl enable pptpd
+# firewall-cmd --set-default-zone=trusted
+
+4)翻墙设置(非必须)
+root@proxy ~]# iptables -t nat -A POSTROUTING -s 192.168.3.0/24 \
+>  -j SNAT --to-source 201.1.2.5
+
+· 客户端设置
+启动一台Windows虚拟机，将虚拟机网卡桥接到public2，配置IP地址为201.1.2.20。
+新建网络连接，输入VPN服务器账户与密码，连接VPN并测试网络连通性。
+
+4.创建L2TP+IPSec VPN
+
+· 部署IPSec服务
+
+  1)安装软件包
+   # yum -y install libreswan
+  2)新建IPSec密钥验证配置文件
+   # cat /etc/ipsec.conf                          //仅查看一下该主配置文件
+   .. ..
+   include /etc/ipsec.d/*.conf                    //加载该目录下的所有配置文件
+   
+   [root@client ~]# vim /etc/ipsec.d/myipsec.conf            
+//新建该文件，参考lnmp_soft/vpn/myipsec.conf    
+conn IDC-PSK-NAT
+    rightsubnet=vhost:%priv                        //允许建立的VPN虚拟网络
+    also=IDC-PSK-noNAT
+conn IDC-PSK-noNAT
+    authby=secret                                    //加密认证
+        ike=3des-sha1;modp1024                        //算法
+        phase2alg=aes256-sha1;modp2048                //算法
+    pfs=no
+    auto=add
+    keyingtries=3
+    rekey=no
+    ikelifetime=8h
+    keylife=3h
+    type=transport
+    left=201.1.2.200                                //重要，服务器本机的外网IP
+    leftprotoport=17/1701
+    right=%any                                    //允许任何客户端连接
+    rightprotoport=17/%any
+    
+  3)创建IPSec预定义共享密钥
+   # cat /etc/ipsec.secrets                       //仅查看，不要修改该文件
+   include /etc/ipsec.d/*.secrets
+   # vim /etc/ipsec.d/mypass.secrets              //新建该文件
+   201.1.2.200   %any:    PSK    "randpass"       //randpass为密钥
+                                                                //201.1.2.200是VPN服务器的IP
+                                                                
+  4)启动IPSec服务
+   [root@client ~]# systemctl start ipsec        
+   [root@client ~]# netstat -ntulp |grep pluto
+   udp        0      0 127.0.0.1:4500          0.0.0.0:*           3148/pluto          
+   udp        0      0 192.168.4.200:4500      0.0.0.0:*           3148/pluto          
+   udp        0      0 201.1.2.200:4500        0.0.0.0:*           3148/pluto          
+   udp        0      0 127.0.0.1:500           0.0.0.0:*           3148/pluto          
+   udp        0      0 192.168.4.200:500       0.0.0.0:*           3148/pluto          
+   udp        0      0 201.1.2.200:500         0.0.0.0:*           3148/pluto          
+   udp6       0      0 ::1:500                 :::*                 3148/pluto
+   
+· 部署XL2TP服务
+  1)安装软件包
+   # yum localinstall xl2tpd-1.3.8-2.el7.x86_64.rpm
+  2) 修改xl2tp配置文件（修改3个配置文件的内容)
+   #  vim  /etc/xl2tpd/xl2tpd.conf
+   [global]
+    .. ..    
+   [lns default]
+    .. ..
+   ip range = 192.168.3.128-192.168.3.254                    //分配给客户端的IP池
+   local ip = 201.1.2.200                                //VPN服务器的IP地址
+   
+   # vim /etc/ppp/options.xl2tpd                //认证配置
+   require-mschap-v2                                         //添加一行，强制要求认证
+   #crtscts                                                //注释或删除该行
+   #lock                                                //注释或删除该行
+   
+   # vim /etc/ppp/chap-secrets                    //修改密码文件
+   jacob   *       123456  *                //账户名称   服务器标记   密码   客户端IP
+   
+  3)启动服务
+   # systemctl start xl2tpd
+   # ss -antulp | grep xl2tpd
+   udp     0      0 0.0.0.0:1701      0.0.0.0:*          3580/xl2tpd
+   
+  4）设置路由转发，防火墙
+   # echo "1" > /proc/sys/net/ipv4/ip_forward
+   # firewall-cmd --set-default-zone=trusted
+  
+  5）翻墙设置（非必需操作）
+   # iptables -t nat -A POSTROUTING -s 192.168.3.0/24 \
+   >  -j SNAT --to-source 201.1.2.200
+
+二.NTP时间同步
+1.NTP协议概述
+· Network Time Protocol(网络时间协议)
+· 它用来同步网络中各个计算机的时间的协议
+· 210.72.145.39(国家授时中心服务器IP地址)
+
+· Stratum(分层设计)
+· Stratum层的总数限制在15以内(包括15)
+
+2.部署NTP服务
+  1)安装软件包
+   # yum -y install chrony
+   # rpm -qc chrony                        //查看配置文件列表
+   /etc/chrony.conf
+   /etc/chrony.keys
+    .. ..
+  2)修改配置文件
+    cat /etc/chrony.conf
+    .. ..
+   server 0.centos.pool.ntp.org iburst         //server用户客户端指向上层NTP服务器
+   allow 192.168.4.0/24                        //允许那个IP或网络访问NTP
+   #deny  192.168.4.1                        //拒绝那个IP或网络访问NTP
+   local stratum 10                            //设置NTP服务器的层数量
+    .. ..
+  
+  3)启动NTP服务
+   # systemctl restart chronyd
+   # systemctl enable chronyd
+   
+3.配置客户端
+
+  1)安装软件包
+   # yum –y install chrony
+  2) 修改配置文件
+   # vim /etc/chrony.conf
+   server 192.168.4.5 iburst                //设置与哪台服务器同步数据
+                                        //iburst参数设置重启服务后尽快同步时间
+  3) 将客户端时间修改为错误的时间
+   #  date  -s  "hour:minute"         //调整时间（小时：分钟）
+   #  date                            //查看修改后的时间
+  
+  4) 重启chrony与服务器同步时间
+   # systemctl  restart  chronyd
+  5) 确认时间是否已经同步
+   # date                            //多执行几次查看结果
+   
+三.pssh远程套件工具
+
+1.作用
+  a)使用密码批量、多并发远程其他主机
+  b)使用密钥批量、多并发远程其他主机
+  c)批量、多并发拷贝数据到其他主机
+  d)批量、多并发从其他主机下载数据到本机
+  e)批量、多并发杀死其他主机的进程
+
+2.准备工作
+  1）安装软件包
+   # rpm -ivh  pssh-2.3.1-5.el7.noarch.rpm
+  2) 修改/etc/hosts本地解析文件
+   cat /etc/hosts
+    … …
+   192.168.2.100  host1
+   192.168.2.200  host2
+   192.168.4.100  host3
+    … …
+  3) 创建主机列表文件
+   # cat /root/host.txt            //每行一个用户名、IP或域名
+    … …
+   root@host1
+   host2
+   host3
+    … …
+    
+3.使用密码批量、多并发远程其他主机
+  1）语法格式
+   # man pssh                    //通过man帮助查看工具选项的作用
+   pssh提供并发远程连接功能
+   -A                使用密码远程其他主机（默认使用密钥）
+   -i                将输出显示在屏幕
+   -H                设置需要连接的主机
+   -h                设置主机列表文件
+   -p                设置并发数量
+   -t                设置超时时间
+   -o dir            设置标准输出信息保存的目录
+   -e dir            设置错误输出信息保存的目录
+   -x                传递参数给ssh
+   
+4.使用密钥批量、多并发远程其他主机
+
+  1）生成密钥并发送密钥到其他主机
+   # ssh-keygen -N  ''   -f /root/.ssh/id_rsa     //非交互生成密钥文件
+   # ssh-copy-id  host1
+   # ssh-copy-id  host2
+   # ssh-copy-id  host3
+  2)使用密钥远程其他主机
+   # pssh -h host.txt  echo hello
+  3)使用密钥远程其他主机，将标准输出信息写入到/tmp目录
+   # pssh -h host.txt -o /tmp/  echo hello
+   
+5.批量、多并发拷贝数据到其他主机
+  1）语法格式
+   # man pscp.pssh                    //通过man帮助查看工具选项的作用
+   pscp.pssh提供并发拷贝文件功能
+   -r    递归拷贝目录
+  · 其他选项基本与pssh一致
+  2) 将本地的/etc/hosts拷贝到远程主机的/tmp目录下
+   # pscp.pssh -h host.txt  /etc/hosts  /tmp
+  3) 递归将本地的/etc目录拷贝到远程主机的/tmp目录下
+   # pscp.pssh -r -h host.txt   /etc   /tmp 
+   
+6.批量、多并发从其他主机下载数据到本机
+  1）语法格式
+   # man pslurp                    //通过man帮助查看工具选项的作用
+   pslurp提供远程下载功能
+  · 选项与pscp.pssh基本一致
+  2) 将远程主机的/etc/passwd，拷贝到当前目录下，存放在对应IP下的pass文件中
+   # pslurp  -h host.txt  /etc/passwd  /pass
+  · 注意：最后的pass是文件名
+  3) 将远程主机的/etc/passwd目录，拷贝到media下，存放在对应IP下的pass文件
+   # pslurp -h host.txt -L  /media   /etc/passwd   /pass
+   
+7.批量、多并发杀死其他主机的进程
+  1）语法格式
+   # man pnuke                    //通过man帮助查看工具选项的作用
+   pnuke提供远程杀死进程的功能
+  · 选项与pssh基本一致
+  2) 将远程主机上的sleep进程杀死
+   # pnuke  -h host.txt  sleep
+  3) 将远程主机上的test相关脚本都杀死（如：test1,testtt,test2等等）
+   # pnuke  -h host.txt  test
+  4) 将远程主机上的test.sh脚本杀死
+   # pnuke  -h host.txt  test.sh
+
+==============================================================================
+
+Day 01 Linux基本防护 用户切换与提权 SSH访问控制 SELinux安全 、 SSH访问控制 SELinux安全
+
+一.Linux基本防护
+
+· 用户账号安全
+
+  1.设置账号有效日期
+  · 使用chage工具
+   -d 0   强制修改密码
+   -l     查看账户信息
+   -E yyyy-mm-dd  指定失效日期(-1取消)  失效的用户将无法登录
+  · 定义默认有效期（强制定期修改密码）
+   # cat /etc/login.defs
+   PASS_MAX_DAYS    99999                        //密码最长有效期
+   PASS_MIN_DAYS    0                            //密码最短有效期
+   PASS_MIN_LEN    5                            //密码最短长度
+   PASS_WARN_AGE    7                            //密码过期前几天提示警告信息
+   UID_MIN                  1000                //UID最小值
+   UID_MAX                  60000                //UID最大值
+    
+  2.账号的锁定/解锁
+  · 使用passwd命令
+   -l  锁定
+   -u  解锁
+   -S  查看状态
+  
+  3.修改tty登录的提示信息，隐藏系统版本(伪装登录提示)
+  · vim /etc/issue          本地登录
+  · vim /etc/issue.net      远程登录
+  
+  4.文件系统安全
+  · 程序和服务控制
+    1) 禁用非必要的系统服务
+      - 使用systemctl,chkconfig工具
+    2) 关闭执行权限
+    # mount -o remount,rw,noexec /dev/vda1 /boot/          //临时修改,永久修改需写入fstab中
+    # mount | grep boot
+    3) 关闭更新atime
+    # # mount -o remount,rw,atime /dev/vda1 /boot/          //临时修改,永久修改需写入fstab中
+    
+  5.锁定/解锁保护文件
+  · EXT3/EXT4的文件属性控制
+   - chattr,lsattr
+   · +,-,=控制方式
+   -i  不可变
+   -a  仅可追加
+   
+· 用户切换与提权
+
+  1.su切换用户身份
+  · su - [目标用户]
+  · su [-] -c "命令" [目标用户]
+  2.sudu提升执行权限
+  · 管理员预先设置执行许可
+  · 被授权用户有执行授权的命令,验证自己的口令
+  · 命令格式
+   # sudo 特权命令
+   # sudo [-u 目标用户] 特权命令
+  · 授权
+   # vim /etc/sudoers
+   或
+   # visudo
+   
+  · 允许用户useradm通过sudo方式添加/删除/修改除root以外的用户账号
+   zhangsan ALL=(ALL)      /usr/bin/systemctl
+   useradm ALL=(root)      /usr/bin/passwd,!/usr/bin/passwd root,/usr/sbin/user*,!/usr/sbin/user* root
+   
+  · 允许wheel组成员以特权执行所有命令
+   %wheel ALL=(ALL)  ALL
+   # usermod -a -G wheel zhangsan
+   
+  · 为sudo机制启用日志记录，以便跟踪sudo执行操作
+   # visudo
+   Defaults  logfile="/var/log/sudo"
+   
+· 提高SSH服务安全
+  
+  1.配置基本安全策略
+   # vim /etc/ssh/sshd_config
+    .. ..
+   Protocol 2                                          //SSH协议
+   PermitRootLogin no                                  //禁止root用户登录
+   PermitEmptyPasswords no                              //禁止密码为空的用户登录
+   UseDNS  no                                          //不解析客户机地址
+   LoginGraceTime  1m                                  //登录限时
+   MaxAuthTries  3                                      //每连接最多认证次数
+    .. ..
+   # systemctl restart sshd
+ 
+  2.针对SSH访问采用仅允许的策略，未明确列出的用户一概拒绝登录
+    # vim /etc/ssh/sshd_config
+     .. ..
+    AllowUsers zhangsan tom useradm@192.168.4.0/24            //定义账户白名单
+    ##DenyUsers  USER1  USER2                                //定义账户黑名单
+    ##DenyGroups  GROUP1 GROUP2                            //定义组黑名单
+    ##AllowGroups  GROUP1 GROUP2                            //定义组白名单
+    # systemctl restart sshd
+  · 验证SSH访问控制，未授权的用户将拒绝登录
+ 
+· SELinux安全防护
+  
+  1.SELinux概述
+  · 什么是SELinux
+    - 一套强化Linux安全的扩展模块
+    - 美国国家安全局主导开发
+  · SELinux的运作机制
+    - 集成到Linux内核(2.6及以上)
+    - 操作系统可定制的策略,管理工具
+  · SELinux策略集
+    SELINUXTYPE=targeted
+      - 推荐,仅保护最常见/关键的网络服务,其他不限制
+      - 主要软件包:
+      selinux-policy
+      selinux-policy-targeted
+      libselinux-utils
+      coreutils
+      policycoreutuilks
+      
+  2.SELinux模式控制
+    1）固定配置：修改/etc/selinux/config文件
+    · 修改kernel启动参数
+      - 添加selinux=0以禁用
+      - 添加enforcing=0 设置SELinux为允许模式
+    · 修改文件/etc/selinux/config
+      - 设置SELINUX=disabled以禁用
+      - 设置SELINUX=permissive宽松/允许模式
+      - 设置SELINUX=enforcing强制模式
+    
+==============================================================================
+
+Day 02 加密与解密 AIDE入侵检测系统 扫描与抓包
+
+一.加密与解密
+
+· 加/解密概述
+
+  1.信息传递中的风险
+  · 电脑黑客
+  · 出差人员
+  · 离职人员
+  · 合作伙伴
+  · 商业间谍
+  · 高管习惯
+  · 开发人员
+  · 流程失控
+  2.什么是加密/解密
+  · 发送方 : 明文 -> 密文
+  · 接收方 : 密文 -> 明文
+  3.加密目的及方式
+  · 确保数据的机密性
+    - 对称加密:加密/解密用同一个密钥
+    - 非对称加密:加密/解密用不同密钥
+  · 保护信息的完整性
+    - 信息摘要:基于输入的信息生成长度较短,数位固定的散列值
+  4.常见的加密算法
+  · 对称加密
+    - DES
+    - AES
+  · 非对称加密
+    - RSA
+    - DSA
+  · Hash散列技术,用于信息摘要
+    - MD5
+    - SHA(256/512)
+  5.MD5完整性教研
+  · 使用md5sum校验工具
+    - 生成MD5校验值
+    - 与软件官方提供的校验值比对
+    
+    vimdiff a b 比对a,b两个文件
+    
+· GPG加/解密工具
+  
+  1.使用GPG对称加密方式保护文件
+    1) 确保已经安装了相关软件（默认已经安装好了）
+     # yum -y install gnupg2            //安装软件
+     # gpg --version                    //查看版本
+     gpg (GnuPG) 2.0.22
+   2) gpg使用对称加密算法加密数据的操作
+     # echo 233 > 1.txt             //创建1.txt
+     # gpg -c 1.txt                 //对称加密
+     # cat 1.txt.gpg                //显示为乱码
+     �ʐik���������n-r6X�E@��2��MJ9C�L����
+    3) 使用gpg对加密文件进行解密操作 
+     # gpg -d 1.txt                 //对称解密
+     # gpg -d 1.txt.gpg | cat
+     gpg: 钥匙环‘/root/.gnupg/secring.gpg’已建立
+     gpg: CAST5 加密过的数据
+     gpg: 以 1 个密码加密
+     gpg: 警告：报文未受到完整的保护
+       233
+  2.使用GPG非对称加密方式保护文件
+    非对称加密/解密文件时，UserA（192.168.4.100）生成私钥与公钥，并把公钥发送给UserB（192.168.4.5），UserB使用公钥加密数据，并把加密后的数据传给UserA，UserA最后使用自己的私钥解密数据
+    1) 接收方UserA创建自己的公钥,私钥对(192.168.4.100)
+     # gpg --gen-key                           //创建密钥对
+     请选择您要使用的密钥种类：
+         (1) RSA and RSA (default)
+         (2) DSA and Elgamal
+         (3) DSA (仅用于签名)
+         (4) RSA (仅用于签名)
+      您的选择？ 
+      RSA 密钥长度应在 1024 位与 4096 位之间。
+      您想要用多大的密钥尺寸？(2048)
+      您所要求的密钥尺寸是 2048 位
+      请设定这把密钥的有效期限。
+               0 = 密钥永不过期
+            <n>  = 密钥在 n 天后过期
+            <n>w = 密钥在 n 周后过期
+            <n>m = 密钥在 n 月后过期
+            <n>y = 密钥在 n 年后过期
+      密钥的有效期限是？(0) 
+      密钥永远不会过期
+      以上正确吗？(y/n)y
+
+      You need a user ID to identify your key; the software constructs the user ID
+      from the Real Name, Comment and Email Address in this form:
+          "Heinrich Heine (Der Dichter) <heinrichh@duesseldorf.de>"
+
+      真实姓名：tommy
+      电子邮件地址：tom@163.com
+      注释：abc
+      您选定了这个用户标识：
+          “tommy (abc) <tom@163.com>”
+
+      更改姓名(N)、注释(C)、电子邮件地址(E)或确定(O)/退出(Q)？o
+      您需要一个密码来保护您的私钥。
+
+      您不想要有密码――这个想法实在是遭透了！
+      不过，我仍然会照您想的去做。您任何时候都可以变更您的密码，仅需要
+      再次执行这个程序，并且使用“--edit-key”选项即可。
+
+      我们需要生成大量的随机字节。这个时候您可以多做些琐事(像是敲打键盘、移动
+      鼠标、读写硬盘之类的)，这会让随机数字发生器有更好的机会获得足够的熵数。
+      我们需要生成大量的随机字节。这个时候您可以多做些琐事(像是敲打键盘、移动
+      鼠标、读写硬盘之类的)，这会让随机数字发生器有更好的机会获得足够的熵数。
+      gpg: 密钥 C600BC96 被标记为绝对信任
+      公钥和私钥已经生成并经签名。
+
+      gpg: 正在检查信任度数据库
+      gpg: 需要 3 份勉强信任和 1 份完全信任，PGP 信任模型
+      gpg: 深度：0 有效性：  1 已签名：  0 信任度：0-，0q，0n，0m，0f，1u
+      pub   2048R/C600BC96 2018-08-30
+      密钥指纹 = 9E41 785B BBF8 3558 E71C  D197 DA72 E794 C600 BC96
+      uid                  tommy (abc) <tom@163.com>
+      sub   2048R/3EF61A55 2018-08-30
+      
+   2) UserA导出自己的公钥文件
+    · 用户的公钥,私钥信息分别保存在pubring.gpg和secring.gpg文件内
+    · 使用gpg命令结合--export选项将其中的公钥文本导出
+     # gpg -a --export UserA > UserA.pub              //--export的作用是导出密钥，-a的作用是导出的密钥存储为ASCII格式
+     # scp UserA.pub 192.168.4.5:/tmp/                //将密钥传给Proxy
+    
+    3) UserB使用公钥加密数据，并把加密后的数据传给UserA（在192.168.4.5操作）
+     # echo "I love you ." > love.txt
+     # gpg -e -r UserA love.txt
+       无论如何还是使用这把密钥吗？(y/N)y                          //确认使用此密钥加密文件
+     //-e选项是使用密钥加密数据
+     //-r选项后面跟的是密钥，说明使用哪个密钥对文件加密
+     # scp love.txt.gpg  192.168.4.100:/root                //加密的数据传给UserA
+     
+   4) UserA以自己的私钥解密文件（在192.168.4.100操作）
+     # gpg -d love.txt.gpg > love.txt
+      您需要输入密码，才能解开这个用户的私钥：“UserA (UserA) <UserA@tarena.com>”
+      2048 位的 RSA 密钥，钥匙号 9FA3AD25，建立于 2017-08-16 (主钥匙号 421C9354)
+                                                      //验证私钥口令
+     gpg: 由 2048 位的 RSA 密钥加密，钥匙号为 9FA3AD25、生成于 2017-08-16
+          “UserA (UserA) <UserA@tarena.com>”
+     # cat love.txt                      //获得解密后的文件内容
+     I love you.
+  
+  3.使用GPG的签名机制，检查数据来源的正确性
+    1) 在client(192.168.4.100)上，UserA为软件包创建分离式签名
+     # tar zcf log.tar /var/log              //建立测试软件包
+     # gpg -b log.tar                      //创建分离式数字签名
+     # ls -lh log.tar*
+     -rw-rw-r--. 1 root root 170 8月  17 21:18 log.tar
+     -rw-rw-r--. 1 root root 287 8月  17 21:22 log.tar.sig
+     # scp log.tar* 192.168.4.5:/root        //将签名文件与签名传给UserB
+    
+    2) 在192.168.4.5上验证签名
+     # gpg --verify log.tar.sig log.tar
+     gpg:于2028年06月07日 星期六 23时23分23秒 CST 创建的签名，使用 RSA，钥匙号 421C9354
+     gpg: 完好的签名，来自于“UserA (UserA) <UserA@tarena.com>”
+      .. ..
+      
+二.使用AIDE做入侵检测
+· 初始化系统
+  1.安装软件包
+   # yum -y install aide
+  2.修改配置文件
+   # vim /etc/aide.conf
+    @@define DBDIR /var/lib/aide                            //数据库目录
+    @@define LOGDIR /var/log/aide                            //日志目录
+    database_out=file:@@{DBDIR}/aide.db.new.gz                //数据库文件名
+    //一下内容为可以检查的项目（权限，用户，组，大小，哈希值等）
+    #p:      permissions
+    #i:      inode:
+    #n:      number of links
+    #u:      user
+    #g:      group
+    #s:      size
+    #md5:    md5 checksum
+    #sha1:   sha1 checksum
+    #sha256:        sha256 checksum
+    DATAONLY =  p+n+u+g+s+acl+selinux+xattrs+sha256
+    //以下内容设置需要对哪些数据进行入侵校验检查
+    //注意：为了校验的效率，这里将所有默认的校验目录与文件都注释
+    //仅保留/root目录，其他目录都注释掉
+    /root   DATAONLY
+    #/boot   NORMAL                                    //对哪些目录进行什么校验
+    #/bin    NORMAL
+    #/sbin   NORMAL
+    #/lib    NORMAL
+    #/lib64  NORMAL
+    #/opt    NORMAL
+    #/usr    NORMAL
+    #!/usr/src                                        //使用[!]，设置不校验的目录
+    #!/usr/tmp
+    
+· 初始化数据库，入侵后检测
+  1.入侵前对数据进行校验，生成初始化数据库
+  [root@proxy ~]# aide --init
+  AIDE, version 0.15.1
+  AIDE database at /var/lib/aide/aide.db.new.gz initialized.
+  //生成校验数据库，数据保存在/var/lib/aide/aide.db.new.gz
+  
+  # mv /var/lib/aide/aide.db.new.gz /var/lib/aide/aide.db.gz
+  //校验时是和不带new的文件进行比对
+  
+  2.备份数据库，将数据库文件拷贝到U盘（非必须的操作）
+  [root@proxy ~]# cp /var/lib/aide/aide.db.new.gz   /media/
+  
+  3.入侵后检测
+  [root@proxy ~]# cd /var/lib/aide/
+  [root@proxy ~]# mv aide.db.new.gz aide.db.gz
+  [root@proxy ~]# aide --check                            //检查哪些数据发生了变化
+  
+三.扫描与抓包分析
+
+· 使用NMAP扫描来获取指定主机/网段的相关信息
+  1.安装软件
+    # yum -y install nmap
+    //基本用法：
+    # nmap  [扫描类型]  [选项]  <扫描目标 ...>
+    //常用的扫描类型
+    // -sS，TCP SYN扫描（半开）
+    // -sT，TCP 连接扫描（全开）
+    // -sU，UDP扫描
+    // -sP，ICMP扫描
+    // -A，目标系统全面分析
+    
+  2.检查192.168.4.100主机是否可以ping通
+    # nmap  -sP  192.168.4.100
+    Starting Nmap 6.40 ( http://nmap.org ) at 2018-06-06 21:59 CST
+    mass_dns: warning: Unable to determine any DNS servers. Reverse DNS is disabled. Try using --system-dns or specify valid servers with --dns-servers
+    Nmap scan report for host3 (192.168.4.100)
+    Host is up (0.00036s latency).
+    MAC Address: 52:54:00:71:07:76 (QEMU Virtual NIC)
+    Nmap done: 1 IP address (1 host up) scanned in 0.02 seconds
+  
+    · 使用-n选项可以不执行DNS解析
+    · 可以批量检查网段(192.168.2.0/24)
+  3.检查目标主机所开启的TCP服务
+    [root@proxy ~]# nmap -sT 192.168.4.100
+     .. ..
+    PORT    STATE SERVICE
+    21/tcp  open  ftp
+    22/tcp  open  ssh
+    25/tcp  open  smtp
+    80/tcp  open  http
+    110/tcp open  pop3
+    111/tcp open  rpcbind
+    143/tcp open  imap
+    443/tcp open  https
+    993/tcp open  imaps
+    995/tcp open  pop3s
+    MAC Address: 00:0C:29:74:BE:21 (VMware)
+    Nmap done: 1 IP address (1 host up) scanned in 0.2 seconds
+     · 检查192.168.4.0/24网段内哪些主机开启了FTP、SSH服务
+    [root@proxy ~]# nmap -p 21-22 192.168.4.0/24
+    [root@proxy ~]# nmap -n -sT -p 22-80 192.168.2.0/24
+     · nmap -sT 全开扫描
+     · nmap -sS 半开扫描
+  4.检查目标主机所开启的UDP服务
+    [root@proxy ~]# nmap   -sU  192.168.4.100                //指定-sU扫描UDP
+    53/udp   open          domain
+    111/udp  open          rpcbind
+  5.全面分析目标主机192.168.4.100和192.168.4.5的操作系统信息
+    [root@proxy ~]# nmap -A 192.168.4.100,5
+
+· 中间人攻击
+  IP地址欺骗
+  MAC地址欺骗
+  IP不同(域名类似)
+  www.icbc.coe[955xx发短信]
+  dhcp(ip,netmask,网关)
+  * 中间人攻击!=抓包
+
+· 使用tcpdump分析FTP访问中的明文交换信息
+  1.准备vsftpd服务器
+   # yum -y install vsftpd
+   # systemctl restart vsftpd
+  2.启用tcpdump命令行抓包
+   # tcpdump
+     //监控选项如下：
+    // -i，指定监控的网络接口（默认监听第一个网卡）
+    // -A，转换为 ACSII 码，以方便阅读
+    // -w，将数据包信息保存到指定文件
+    // -r，从指定文件读取数据包信息
+    //tcpdump的过滤条件：
+    // 类型：host、net、port、portrange
+    // 方向：src、dst
+    // 协议：tcp、udp、ip、wlan、arp、……
+    // 多个条件组合：and、or、not
