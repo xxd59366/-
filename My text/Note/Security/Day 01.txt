@@ -126,4 +126,4 @@ Day 01 Linux基本防护 用户切换与提权 SSH访问控制 SELinux安全 、
       - 设置SELINUX=permissive宽松/允许模式
       - 设置SELINUX=enforcing强制模式
     
-  3.
+

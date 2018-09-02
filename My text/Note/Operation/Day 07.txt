@@ -273,7 +273,7 @@ conn IDC-PSK-noNAT
    -r    递归拷贝目录
   · 其他选项基本与pssh一致
   2) 将本地的/etc/hosts拷贝到远程主机的/tmp目录下
-   # pscp.pssh -h host.txt  /etc/hosts  / tmp
+   # pscp.pssh -h host.txt  /etc/hosts  /tmp
   3) 递归将本地的/etc目录拷贝到远程主机的/tmp目录下
    # pscp.pssh -r -h host.txt   /etc   /tmp 
    
