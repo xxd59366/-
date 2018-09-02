@@ -1,15 +1,31 @@
 Day 03 系统审计 服务安全 Linux安全之打补丁
 
 一.系统审计
-  1.部署audit监控文件
-  · 审计的目的是基于事先配置的规则生成日志，记录可能发生在系统上的事件（正常或非正常行为的事件），审计不会为系统提供额外的安全保护，但她会发现并记录违反安全策略的人及其对应的行为
-  a) 日期与事件以及事件的结果
-  b) 触发事件的用户
-  c) 所有认证机制的使用都可以被记录，如ssh等
-  d) 对关键数据文件的修改行为等都可以被记录
-  
+· 什么是审计
+  - 基于事先配置的规则生成日志,记录可能发生在系统上的事件
+  - 审计不会为系统提供额外的安全保护,但他会发现并记录违反安全策略的人及其对应的行为
+  - 审计能够记录的日志内容:
+    a.日期与事件,事件结果
+    b.触发事件的用户
+    c.所有认证机制的使用都可以被记录,如ssh等
+    d.对关键数据文件的修改行为等
+    
+· 审计的案例
+  - 监控文件访问
+  - 监控系统调用
+  - 记录用户运行的命令
+  - 审计可以监控网络访问行为
+  - ausearch工具,可以根据条件过滤审计日志
+  - aureport工具,可以生成审计报告
+    
+1.部署audit监控文件
+   
   1) 安装软件包，查看配置文件（确定审计日志的位置）
-  # yum -y  install  audit
+  # yum -y  install  audit                //安装软件包
+  # cat /etc/audit/auditd.conf            //查看配置文件，确定日志位置
+  log_file = /var/log/audit/audit.log     //日志文件路径
+  # systemctl start auditd                //启动服务
+  # systemctl enable auditd               //设置开机自启
   
   2) 配置审计规则
   · 可以使用auditctl命令控制审计系统并设置规则
@@ -23,7 +39,7 @@ Day 03 系统审计 服务安全 Linux安全之打补丁
   # 权限可以是r,w,x,a(文件或目录的属性发生变化)
  # Key_name为可选项，方便识别哪些规则生成特定的日志项
 
-example:
+· example:
  # auditctl  -w  /etc/passwd  -p wa  -k  passwd_change
 //设置规则所有对passwd文件的写、属性修改操作都会被记录审计日志
  # auditctl  -w  /etc/selinux/  -p wa  -k  selinux_change
@@ -149,9 +165,9 @@ example:
          server {
                    listen 80;
   #这里，!符号表示对正则取反，~符号是正则匹配符号
-  #如果用户使用非GET或POST方法访问网站，则retrun返回444的错误信息
+  #如果用户使用非GET或POST方法访问网站，则retrun返回400的错误信息
                 if ($request_method !~ ^(GET|POST)$ ) {
-                       return 444;
+                      return 400;
                  }    
           }
   }
