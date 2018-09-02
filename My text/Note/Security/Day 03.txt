@@ -308,3 +308,59 @@ Day 03 系统审计 服务安全 Linux安全之打补丁
   [root@web1 ~]# rm -rf  /usr/local/tomcat/webapps/*
   
 三.使用diff和patch工具打补丁
+
+1.比单个文件差异
+
+  1） 编写两个版本的脚本，一个为v1版本，一个为v2版本。
+  [root@proxy ~]# cat test1.sh                                //v1版本脚本
+  #!/bin/bash
+  echo "hello wrld"
+  [root@proxy ~]# cat test2.sh                                //v2版本脚本
+  #!/bin/bash
+  echo "hello the world"
+  echo "test file"
+  2） 使用diff命令语法
+  使用diff命令查看不同版本文件的差异。
+  [root@proxy ~]# diff  test1.sh test2.sh                     //查看文件差异
+  @@ -1,3 +1,3 @@
+   #!/bin/bash
+  -echo "hello world"
+  -echo "test"
+  +echo "hello the world"
+  +echo "test file"
+  [root@proxy ~]# diff -u test1.sh test2.sh                 //查看差异，包含头部信息
+  --- test1.sh    2018-02-07 22:20:02.723971251 +0800
+  +++ test2.sh    2018-02-07 22:20:13.358760687 +0800
+  @@ -1,3 +1,3 @@
+   #!/bin/bash
+  -echo "hello world"
+  -echo "test"
+  +echo "hello the world"
+  +echo "test file"
+  
+2.使用patch命令对单文件代码打补丁
+
+  1）准备实验环境
+  [root@proxy ~]# cd demo
+  [root@proxy demo]# vim test1.sh
+  #!/bin/bash
+  echo "hello world"
+  echo "test"
+  [root@proxy demo]# vim test2.sh 
+  #!/bin/bash
+  echo "hello the world"
+  echo "test file"
+  2) 生成补丁文件
+  [root@proxy demo]# diff -u test1.sh test2.sh > test.patch
+  3）使用patch命令打补丁
+  在代码相同目录下为代码打补丁
+  [root@proxy demo]# yum -y install patch
+  [root@proxy demo]# patch -p0 < test.patch                    //打补丁
+  patching file test1.sh
+  //patch -pnum（其中num为数字，指定删除补丁文件中多少层路径前缀）
+  //如原始路径为/u/howard/src/blurfl/blurfl.c
+  //-p0则整个路径不变
+  //-p1则修改路径为u/howard/src/blurfl/blurfl.c
+  //-p4则修改路径为blurfl/blurfl.c
+  //-R(reverse)反向修复，-E修复后如果文件为空，则删除该文件
+  [root@proxy demo]# patch -RE < test.patch                     //还原旧版本，反向修复
