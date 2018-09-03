@@ -1,0 +1,51 @@
+18年8月底周考
+
+1.常见Web服务器软件：
+Apache httpd，Nginx，Apache Tomcat，Lighttpd,IBM WebSphere，IIS
+
+2.什么是LNMP？
+L：操作系统（Linux）
+N：网站服务软件（nginx）
+M：数据库服务软件（MariaDB）
+P：网站开发语言（PHP,perl，python）
+
+3.简述memcached
+高性能分布式缓存数据库服务器，是一个跨平台的，开源的实现分布式缓存服务的软件
+
+4.什么情况下memcached会删除缓存数据？
+· 当分配的存储空间存满时，有新数据需要存储时，会删除最近最少使用的数据；
+· 重新启动memcached服务；
+· 运行memcached服务的操作系统重启；
+
+5.哪些参数影响了Tomcat部署网站时的路径？
+Host标签下的appBase，DocBase，path
+
+6.代理软件的功能
+web访问加速；
+IP伪装（翻墙）
+
+7.varnish是什么？
+高性能且开源的反向代理服务器和http加速器
+
+8.Nginx服务器地址重写用到的参数
+rerwrite
+
+9.Nginx服务器地址重写格式中的选项分别是（）（）（）（）
+last
+break
+redirect
+permanent 永久重定向，新网址完全继承旧网址，旧网址的排名等完全清零，多用于网络蜘蛛
+
+10.php默认把session会话保存在
+/var/lib/php/session
+
+11.Linux系统使用（）命令查看已加载的内核模块，使用（）命令加载新的内核模块，使用（）命令可以查看内核模块的信息
+lsmod
+modprobe
+modinfo
+
+12.英文翻译
+reversion		checkout		merge		allocation	 refer		token		content		
+	修订				校验			  合并			分配			  提交		 标记		   内容				
+ upgrade		upstream   	count		   weight		visible	
+    升级				上游		计数，总数		权重			可见的
