@@ -1,0 +1,7 @@
+问题1: 自定义监控中,想要将脚本和自定义监控配套给别人,能不能自定义变量代表目录?如果能,该怎么做?
+场景模拟: 
+同时在/usr/local/etc/zabbix_agentd.conf.d/ 中创建目录shells(放nginx.status.sh执行脚本),
+同时创建nginx.status自定义监控,此时,我需要将这两个文件用tar -czPf打包传给其他人,而他将使用tar -xPf傻瓜式解包即用
+那么此时在nginx.status文件中该如何定位到shells目录调用脚本?
+
+问题2: 自定义监控要如何应用在主动监控中?

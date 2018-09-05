@@ -19,7 +19,7 @@ Day 05 监控概述 、 Zabbix基础 、 Zabbix监控服务
     - 用户,进程等运行信息
      
   · 被监控主机需安装agent(每一台)
-  · agent a
+  · agent
   
 · 监控软件
   1.系统监控命令
