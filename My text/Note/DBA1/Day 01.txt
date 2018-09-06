@@ -1,0 +1,281 @@
+Day 01 数据库服务概述 构建MySQL服务器 数据库基本管理 MySQL数据类型
+
+一.数据库服务概述
+
+· 什么是数据库
+  1.什么是数据库
+  · 存储数据的仓库 按照规定的格式吧数据存储在物理介质
+    -规定的格式:建库 建表 插入记录
+  · 关系型数据库      RDBMS MySQL
+  · 非关系型数据库    NoSQL Redis / Mongodb
+
+  2.课程安排
+  · DBA1 基础
+    Day1 搭建数据库服务器
+    Day2 mysql键值 存储引擎
+    Day3 数据管理
+    Day4 用户管理
+    Day5 数据备份与恢复
+
+    DBA2 进阶
+    Day1 MySQL主从同步
+    Day2 数据读写分离
+    Day3 mysql集群
+    Day4 视图和存储过程
+    Day5 调整和优化
+
+    NoSQL
+    redis服务的使用    3天
+    mongodb服务的使用  2天
+
+· 搭建数据库服务器
+  1.在mysql50上部署数据库服务
+    ·装包之前的了解
+     常见的数据库服务软件
+     Oracle Database        Oracle(甲骨文)            闭源
+     MySQL/Mariadb          Oracle(甲骨文)            跨平台&开源
+     SQL Server             Microsoft(微软)           闭源
+     Access                 Microsoft(微软)           闭源
+     DB2                    IBM
+     Sybase                 Sybase
+     PostgreSQL             加州大学伯克利分校        跨平台&开源
+
+     开源!=免费
+     商业软件多用于国家机构和金融机构
+     互联网公司多使用开源软件(拥有自己的开发团队)
+     
+     MySQL数据库介绍
+      ·最著名,应用最广泛的开源数据库软件
+        -最早隶属于瑞典的MySQL AB公司
+	-08年1月MySQL AB 被Sun收购
+	-09年4月Sun被Oracle收购
+      ·新的开源分支MariaDB
+        -为应付MySQL可能会闭源的风险
+	-由MySQL原作者Widenius主导开发
+	-与MySQL保持最大程度兼容
+     
+     MySQL的特点及应用
+      ·关系型数据库 RDBMS MySQL
+       存储时必须按照事先设置好的结构存储数据
+       已经的存储之间可以做关联操作
+      ·非关系型数据库 NoSQL Redis /Mongodb
+       数据存储时不需要事先创建存储结构,使用key和values键值对方式存储数据
+       已经的存储之间不可以做关联操作
+      ·主要特点
+       跨平台
+       用c和c++编写,可移植性强
+       通过API支持Python/Java/Perl/PHP等语言
+      ·典型应用环境
+       LAMP平台和LNMP平台,与Apache HTTP Server/Nginx组合
+    
+    ·装包
+     真机Ftp搭个yum,虚拟机yum配置文件添加mysql仓库模块
+     # yum -y install mysql-community-*
+
+    ·配置
+     mysql主配置文件
+     # ls /etc/my.cnf
+     mysql数据库目录
+     # ls /var/lib/mysql
+     默认端口号 3306
+     进程名 mysqld
+     传输协议 TCP
+     进程所有者/所属组 mysql/mysql
+
+    ·启服务
+     # systemctl start mysqld
+     # systemctl enable mysqld
+     # systemctl status mysqld
+  
+  2.MySQL初始配置
+    ·修改密码
+     mysql> alter user root@localhost identified by "123Gln!!";
+    ·连接数据库服务器
+     方式:命令行,程序连接(脚本),图形工具
+     建库:查看已有库 创建新库 切换库 查看库下的表 删除库
+      select database(); 显示当前所在库
+      库命名规则:
+      -可以使用数字/字母/下划线,但不能纯数字
+      -区分大小写,具有唯一性
+      -不可使用指令关键字,特殊字符
+     建表:
+     不在库里:
+     CREATE TABLE 库名.表名(
+       字段名1 字段类型(宽度) 约束条件,
+       字段名2 字段类型(宽度) 约束条件,
+       .. ..
+       字段名N 字段类型(宽度) 约束条件
+     );
+     在库里:
+     CREATE TABLE 表名(
+       字段名1 字段类型(宽度) 约束条件,
+       字段名2 字段类型(宽度) 约束条件,
+       .. ..
+       字段名N 字段类型(宽度) 约束条件
+     );
+
+     库 --> 文件夹
+     表 --> 文件
+     -desc 表名;               //查看表结构
+     -select * from 表名;      //查看表记录
+     -delete from 表名;        //删除表记录
+     -drop table 表名;         //删除表
+     -drop database 库名;      //删除库
+
+  3.使用MySQL管理环境
+   
+   ·操作指令类型
+    -MySQL指令:环境切换,看状态,退出等控制
+    -SQL指令:数据库定义/查询/操纵/授权语句
+   
+   ·基本注意事项
+    -操作指令不区分大小写(密码,变量值除外)
+    -每条SQL指令以;结束或分隔
+    -不支持Tab键自动补齐
+    -\c可废弃当前编写错的操作指令
+   
+   ·常用的SQL操作指令
+    -DDL数据定义语言(create,alter,drop)
+    -DML数据操作语言(insert,update,delete)
+    -DCL数据控制语言(grant,revoke)
+    -DTL数据事物语言(commit,rollback,savepoint)
+
+  4.常见的信息种类
+   ·常见的信息类型
+    -数值型:体重,身高,成绩,工资
+    -字符型:姓名,工作单位,通信住址
+    -枚举型:兴趣爱好,性别
+    -日期时间型:出生日期,注册时间
+   ·数值类型
+      类型     大小      范围(有符号)       范围(无符号)        用途
+    TINYINT    1字节       -128~127            0~255          微小整数
+    SMALLINT   2字节     -32768~32767         0~65535          小整数
+    MEDIUMINT  3字节     -2^23~2^23-1         0~2^24-1         中整数
+      INT      4字节     -2^31~2^31-1         0~2^32-1         大整数
+     BIGINT    8字节     -2^63~2^63-1         0~2^64-1        极大整数
+     FLOAT     4字节                                         单精度浮点数
+     DOUBLE    8字节                                         双精度浮点数
+     DECIMAL   对DECIMAL(M,D),其中M为有效位数,D为小数位数,M应大于D
+               占用M+2字节
+    unsigned   使用无符号存储范围
+   
+   ·字符类型
+    ·定长:char(字符数)
+     -最大长度255字符
+     -不够指定字符数时在右边用空格补齐
+     -字符数段超出时,无法写入数据
+    ·变长:varchar(字符数)
+     -按数据实际大小分配存储空间
+     -字符数段超出时,无法写入数据
+    ·大文本类型:text/blob
+     -字符数大于65535存储时使用
+   ·日期时间类型--datetime
+     -yyyymmddhhmmss
+     -20180906172958
+    datetime
+    timestamp
+   ·日期类型--date
+     -yyyymmdd
+     -20180906
+    date
+   ·时间类型--time 
+     -hhmmss
+     -173218
+   ·年--year
+     -占用1个字节
+     -范围:1901~2155
+
+   ·枚举类型:字段的值只能在列举的值里选择
+   字段名 enum(值列表) 单选
+   字段名 set(值列表)  多选
+
+######################################################
+
+  操作:
+  mysql> create database game;
+  mysql> use game;
+  mysql> create table t1(name char,age int,sex char);
+  mysql> show tables;
+  +----------------+
+  | Tables_in_game |
+  +----------------+
+  | t1             |
+  +----------------+
+  1 row in set (0.00 sec)
+  
+  mysql> insert into t1 values("a",19,"m"),("b",21,"m"),("c",18,"g");
+  mysql> select * from t1;
+  mysql> select name,age from t1;
+  mysql> delete from t1;
+  mysql> drop table t1;
+  mysql> drop database game;
+  mysql> CREATE TABLE `学生表` (   `姓名` char(10) DEFAULT NULL,   `年龄` int(11) DEFAULT NULL ) DEFAULT CHARSET=utf8;
+  mysql> INSERT INTO `学生表` VALUES("黄惺惺",23),("张朔朔",19);
+  mysql> select * from 学生表;
+  +-----------+--------+
+  | 姓名      | 年龄   |
+  +-----------+--------+
+  | 黄惺惺    |     23 |
+  | 张朔朔    |     19 |
+  +-----------+--------+
+  2 rows in set (0.00 sec)
+
+  mysql> desc t1;
+  +-------+------------+------+-----+---------+-------+
+  | Field | Type       | Null | Key | Default | Extra |
+  +-------+------------+------+-----+---------+-------+
+  | age   | tinyint(4) | YES  |     | NULL    |       |
+  | pay   | float(7,2) | YES  |     | NULL    |       |
+  +-------+------------+------+-----+---------+-------+
+  2 rows in set (0.00 sec)
+
+  mysql> insert into t1 values(50,20080.67);
+  mysql> insert into t1 values(50,20080.678);
+  mysql> insert into t1 values(50,2008.678);
+  mysql> select * from t1;
+  +------+----------+
+  | age  | pay      |
+  +------+----------+
+  |   50 | 20080.67 |
+  |   50 | 20080.68 |
+  |   50 |  2008.68 |
+  +------+----------+
+  3 rows in set (0.00 sec)
+  
+  mysql> create table t5(
+    -> name char(10),
+    -> birthday date,
+    -> meeting datetime,
+    -> start year,
+    -> ctime time
+    -> );
+  Query OK, 0 rows affected (0.21 sec)
+  
+  mysql> desc t5;
+  +----------+----------+------+-----+---------+-------+
+  | Field    | Type     | Null | Key | Default | Extra |
+  +----------+----------+------+-----+---------+-------+
+  | name     | char(10) | YES  |     | NULL    |       |
+  | birthday | date     | YES  |     | NULL    |       |
+  | meeting  | datetime | YES  |     | NULL    |       |
+  | start    | year(4)  | YES  |     | NULL    |       |
+  | ctime    | time     | YES  |     | NULL    |       |
+  +----------+----------+------+-----+---------+-------+
+  5 rows in set (0.00 sec)
+
+  mysql> create table t6(
+    -> name char(5),
+    -> sex enum("boy","girl","no"),
+    -> likes set("y","yy","yyy")
+    -> );
+
+  mysql> desc t6;
+  +-------+-------------------------+------+-----+---------+-------+
+  | Field | Type                    | Null | Key | Default | Extra |
+  +-------+-------------------------+------+-----+---------+-------+
+  | name  | char(5)                 | YES  |     | NULL    |       |
+  | sex   | enum('boy','girl','no') | YES  |     | NULL    |       |
+  | likes | set('y','yy','yyy')     | YES  |     | NULL    |       |
+  +-------+-------------------------+------+-----+---------+-------+
+  3 rows in set (0.00 sec)
+
