@@ -1,0 +1,445 @@
+Day 02 约束条件 修改表结构 MySQL键值
+
+一.约束条件
+
+· 约束条件的作用:限制如何给字段赋值
+· 约束条件的类型
+  NULL         允许为空,默认设置
+  NOT NULL     不允许为空
+  KEY          索引类型
+  Default      默认设置
+
+二.修改表结构
+
+· 语法结构
+  1.基本用法
+   -ALTER TABLE 表名 执行动作;
+   
+   -ALTER TABLE 表名
+   ADD 字段名 类型(宽度) 约束条件;
+   可添加AFTER字段名或者FIRST;
+
+   -ALTER TABLE 表名
+   MODIFY 字段名 类型(宽度) 约束条件;
+   可添加AFTER字段名或者FIRST;
+
+   -ALTER TABLE 表名
+   CHANGE 源字段名 新字段名 类型(宽度) 约束条件;
+   //当更新类型和约束条件时,也可修改字段类型
+
+   -ALTER TABLE 表名
+   DROP 字段名;
+   //表中由多条记录时,所有列的此字段的值会被删除
+
+   -ALTER TABLE 表名
+   RENAME 新表名;
+   //表对应的文件名也会改变
+
+三.MySQL键值
+
+· 作用1:限制如何给字段赋值
+· 作用2:给字段的值排队
+
+1.索引
+· 索引介绍
+  1.索引是对记录集的多个字段进行排序的方法
+  2.类似于目录
+  3.索引类型包括:Btree,B+tree,Hash
+    INDEX普通索引
+    - 一个表中可以有多个INDEX字段
+    - 字段的值允许有重复,且可以赋值NULL值
+    - 经常把做查询条件的字段设置为INDEX字段
+    - INDEX字段的KEY标志是MUL
+· 索引优缺点
+  · 优点
+    - 通过创建唯一性索引,可以保证数据库表中每一行数据的唯一性
+    - 可以加快数据的检索速度
+  · 缺点
+    - 对表进行增删改的时候,索引需要动态的维护,降低了数据维护的速度
+    - 索引需要占用物理空间
+· 键值类型
+    普通索引  index
+    主键      primary key
+    外键      foreign key
+    唯一索引  unique
+    全文索引  fulltext
+
+· 索引详解
+  1.查看
+    查看表是否创建索引字段
+     desc 表名
+    查看索引详细信息
+     show index from 表名
+  2.创建
+    建表创建index字段
+    给已有表创建index字段
+    create index 索引名 on 表名(字段名);
+  3.删除
+    删除指定表的索引字段
+    drop index 索引名 on 表名;
+
+2.主键 primary key
+· 注意事项
+  - 一个表中只能由一个primary key字段
+  - 对应的字段值不允许有重复,且不允许赋空
+  - 如果有多个字段都作为primary key,称为复合主键,必须一起创建
+  - 主键字段的key标志是pri
+  - 通常与auto_increment连用
+  - 经常把表中能够唯一标识记录的字段设置为主键字段[记录编号字段]
+· 主键详解
+  1.建表的时候定义主键字段
+    -primary key(字段名)
+  2.在已有的表中设置primary key字段
+    -ALTER TABLE 表名 ADD PRIMARY KEY(字段名)
+  3.移除表中的PRIMARY KEY字段
+    -ALTER TABLE 表名 DROP PRIMARY KEY;
+  4.复合主键:表中多个字段做主键,作主键字段的值不允许同时重复;
+  5.主键自增:当前表中主键最大值+1
+
+三.外键 foreign key
+· 使用规则
+  1.什么是外键?
+    -让当前表字段的值在另一个表中字段值的范围内选择
+  2.使用外键的条件
+    -表的存储引擎必须是innodb
+    -字段类型要一致
+    -被参照字段必须要是索引类型的一种(proimary key)
+  3.创建外键
+    create table 表名 engine=innodb;
+
+###################################################
+
+案例
+
+· 约束条件
+
+mysql> create table t25(
+    -> name char(3) not null,
+    -> age tinyint(2) default 21,
+    -> sex enum("m","w") not null default "m"
+    -> );
+
+mysql> desc t25;
++-------+---------------+------+-----+---------+-------+
+| Field | Type          | Null | Key | Default | Extra |
++-------+---------------+------+-----+---------+-------+
+| name  | char(3)       | NO   |     | NULL    |       |
+| age   | tinyint(2)    | YES  |     | 21      |       |
+| sex   | enum('m','w') | NO   |     | m       |       |
++-------+---------------+------+-----+---------+-------+
+3 rows in set (0.00 sec)
+
+mysql> insert into t25(name) values("bob");
+Query OK, 1 row affected (0.07 sec)
+
+mysql> insert into t25 values("tom",18,"w");
+Query OK, 1 row affected (0.04 sec)
+
+mysql> insert into t25 values(null,null,null);
+ERROR 1048 (23000): Column 'name' cannot be null
+
+mysql> create table t26(
+    -> name char(4) not null,
+    -> age tinyint(2) default 21,
+    -> sex enum("m","w") not null default "m"
+    -> );
+Query OK, 0 rows affected (0.26 sec)
+
+mysql> insert into t26 values("null",null,"m");
+Query OK, 1 row affected (0.09 sec)
+
+mysql> insert into t26 values("",null,"m");
+Query OK, 1 row affected (0.04 sec)
+
+mysql> insert into t26 values(null,null,"m");
+ERROR 1048 (23000): Column 'name' cannot be null
+
+mysql> alter table t6 add email varchar(50) default "stu@tedu.cn", add tel char(11);
+
+mysql> desc t6;
++-------+-------------------------+------+-----+-------------+-------+
+| Field | Type                    | Null | Key | Default     | Extra |
++-------+-------------------------+------+-----+-------------+-------+
+| name  | char(5)                 | YES  |     | NULL        |       |
+| sex   | enum('boy','girl','no') | YES  |     | NULL        |       |
+| likes | set('y','yy','yyy')     | YES  |     | NULL        |       |
+| email | varchar(50)             | YES  |     | stu@tedu.cn |       |
+| tel   | char(11)                | YES  |     | NULL        |       |
++-------+-------------------------+------+-----+-------------+-------+
+5 rows in set (0.00 sec)
+
+mysql> alter table t6 add class char(7) default "nsd1806" first, add qq varchar(11) after name;
+Query OK, 0 rows affected (0.56 sec)
+//添加class到最前,添加qq到name之后
+
+mysql> desc t6;
++-------+-------------------------+------+-----+-------------+-------+
+| Field | Type                    | Null | Key | Default     | Extra |
++-------+-------------------------+------+-----+-------------+-------+
+| class | char(7)                 | YES  |     | nsd1806     |       |
+| name  | char(5)                 | YES  |     | NULL        |       |
+| qq    | varchar(11)             | YES  |     | NULL        |       |
+| sex   | enum('boy','girl','no') | YES  |     | NULL        |       |
+| likes | set('y','yy','yyy')     | YES  |     | NULL        |       |
+| email | varchar(50)             | YES  |     | stu@tedu.cn |       |
+| tel   | char(11)                | YES  |     | NULL        |       |
++-------+-------------------------+------+-----+-------------+-------+
+7 rows in set (0.00 sec)
+
+mysql> alter table t6
+    -> modify sex enum('boy','girl','no') not null default "no"
+    -> after name;
+
+mysql> desc t6;
++-------+-------------------------+------+-----+-------------+-------+
+| Field | Type                    | Null | Key | Default     | Extra |
++-------+-------------------------+------+-----+-------------+-------+
+| class | char(7)                 | YES  |     | nsd1806     |       |
+| name  | char(5)                 | YES  |     | NULL        |       |
+| sex   | enum('boy','girl','no') | NO   |     | no          |       |
+| qq    | varchar(11)             | YES  |     | NULL        |       |
+| likes | set('y','yy','yyy')     | YES  |     | NULL        |       |
+| email | varchar(50)             | YES  |     | stu@tedu.cn |       |
+| tel   | char(11)                | YES  |     | NULL        |       |
++-------+-------------------------+------+-----+-------------+-------+
+7 rows in set (0.01 sec)
+
+mysql> alter table t6
+    -> change email mail varchar(50) default "stu@tedu.cn";
+Query OK, 0 rows affected (0.08 sec)
+Records: 0  Duplicates: 0  Warnings: 0
+
+mysql> desc t6;
++-------+-------------------------+------+-----+-------------+-------+
+| Field | Type                    | Null | Key | Default     | Extra |
++-------+-------------------------+------+-----+-------------+-------+
+| class | char(7)                 | YES  |     | nsd1806     |       |
+| name  | char(5)                 | YES  |     | NULL        |       |
+| sex   | enum('boy','girl','no') | NO   |     | no          |       |
+| qq    | varchar(11)             | YES  |     | NULL        |       |
+| likes | set('y','yy','yyy')     | YES  |     | NULL        |       |
+| mail  | varchar(50)             | YES  |     | stu@tedu.cn |       |
+| tel   | char(11)                | YES  |     | NULL        |       |
++-------+-------------------------+------+-----+-------------+-------+
+7 rows in set (0.00 sec)
+
+mysql> create index abc on t5(name);
+mysql> desc t5;
++----------+----------+------+-----+---------+-------+
+| Field    | Type     | Null | Key | Default | Extra |
++----------+----------+------+-----+---------+-------+
+| name     | char(10) | YES  | MUL | NULL    |       |
+| birthday | date     | YES  |     | NULL    |       |
+| meeting  | datetime | YES  |     | NULL    |       |
+| start    | year(4)  | YES  |     | NULL    |       |
+| ctime    | time     | YES  |     | NULL    |       |
++----------+----------+------+-----+---------+-------+
+5 rows in set (0.00 sec)
+mysql> show index from t5\G;
+*************************** 1. row ***************************
+        Table: t5
+   Non_unique: 1
+     Key_name: abc
+ Seq_in_index: 1
+  Column_name: name
+    Collation: A
+  Cardinality: 2
+     Sub_part: NULL
+       Packed: NULL
+         Null: YES
+   Index_type: BTREE
+      Comment: 
+Index_comment: 
+1 row in set (0.00 sec)
+
+ERROR: 
+No query specified
+
+mysql> explain select * from t5 where name='bob'\G;
+*************************** 1. row ***************************
+           id: 1
+  select_type: SIMPLE
+        table: t5
+   partitions: NULL
+         type: ref
+pecifiedossible_keys: abc
+          key: abc
+      key_len: 11
+          ref: const
+         rows: 1
+     filtered: 100.00
+        Extra: NULL
+1 row in set, 1 warning (0.00 sec)
+
+ERROR: 
+No query specified
+
+mysql> create table t27(
+    -> name char(10),
+    -> age int(2),
+    -> class char(7),
+    -> index(name),
+    -> index(age)
+    -> );
+Query OK, 0 rows affected (0.24 sec)
+
+mysql> desc t27;
++-------+----------+------+-----+---------+-------+
+| Field | Type     | Null | Key | Default | Extra |
++-------+----------+------+-----+---------+-------+
+| name  | char(10) | YES  | MUL | NULL    |       |
+| age   | int(2)   | YES  | MUL | NULL    |       |
+| class | char(7)  | YES  |     | NULL    |       |
++-------+----------+------+-----+---------+-------+
+3 rows in set (0.00 sec)
+
+mysql> show index from t27\G;
+*************************** 1. row ***************************
+        Table: t27
+   Non_unique: 1
+     Key_name: name
+ Seq_in_index: 1
+  Column_name: name
+    Collation: A
+  Cardinality: 0
+     Sub_part: NULL
+       Packed: NULL
+         Null: YES
+   Index_type: BTREE
+      Comment: 
+Index_comment: 
+*************************** 2. row ***************************
+        Table: t27
+   Non_unique: 1
+     Key_name: age
+ Seq_in_index: 1
+  Column_name: age
+    Collation: A
+  Cardinality: 0
+     Sub_part: NULL
+       Packed: NULL
+         Null: YES
+   Index_type: BTREE
+      Comment: 
+Index_comment: 
+2 rows in set (0.00 sec)
+
+ERROR: 
+No query specified
+
+mysql> create table jfb(
+    -> name char(10),
+    -> stu_id int(1),
+    -> pay enum("yes","no"),
+    -> primary key(name,stu_id)
+    -> );
+Query OK, 0 rows affected (0.30 sec)
+
+mysql> desc jfb;
++--------+------------------+------+-----+---------+-------+
+| Field  | Type             | Null | Key | Default | Extra |
++--------+------------------+------+-----+---------+-------+
+| name   | char(10)         | NO   | PRI | NULL    |       |
+| stu_id | int(1)           | NO   | PRI | NULL    |       |
+| pay    | enum('yes','no') | YES  |     | NULL    |       |
++--------+------------------+------+-----+---------+-------+
+3 rows in set (0.00 sec)
+
+mysql> insert into jfb values("bob",1,"yes");
+Query OK, 1 row affected (0.05 sec)
+
+mysql> select * from jfb;
++------+--------+------+
+| name | stu_id | pay  |
++------+--------+------+
+| bob  |      1 | yes  |
++------+--------+------+
+1 row in set (0.00 sec)
+
+mysql> insert into jfb values("bob",1,"no");
+ERROR 1062 (23000): Duplicate entry 'bob-1' for key 'PRIMARY'
+mysql> insert into jfb values("bob",2,"no");
+Query OK, 1 row affected (0.05 sec)
+
+mysql> select * from jfb;
++------+--------+------+
+| name | stu_id | pay  |
++------+--------+------+
+| bob  |      1 | yes  |
+| bob  |      2 | no   |
++------+--------+------+
+2 rows in set (0.00 sec)
+
+mysql> alter table jfb drop primary key;
+Query OK, 2 rows affected (0.56 sec)
+Records: 2  Duplicates: 0  Warnings: 0
+
+mysql> alter table jfb add primary key (name,stu_id);
+Query OK, 0 rows affected (0.62 sec)
+Records: 0  Duplicates: 0  Warnings: 0
+
+mysql> desc jfb;
++--------+------------------+------+-----+---------+-------+
+| Field  | Type             | Null | Key | Default | Extra |
++--------+------------------+------+-----+---------+-------+
+| name   | char(10)         | NO   | PRI | NULL    |       |
+| stu_id | int(1)           | NO   | PRI | NULL    |       |
+| pay    | enum('yes','no') | YES  |     | NULL    |       |
++--------+------------------+------+-----+---------+-------+
+3 rows in set (0.00 sec)
+
+mysql> insert into t221(age,class) values(12,"1806");
+Query OK, 1 row affected (0.05 sec)
+
+mysql> insert into t221(age,class) values(82,"1807");
+Query OK, 1 row affected (0.03 sec)
+
+mysql> insert into t221(age,class) values(12,"1806");
+Query OK, 1 row affected (0.04 sec)
+
+mysql> insert into t221(age,class) values(12,"1806");
+Query OK, 1 row affected (0.07 sec)
+
+mysql> select * from t221;
++----+------+-------+
+| id | age  | class |
++----+------+-------+
+|  1 |   12 | 1806  |
+|  2 |   82 | 1807  |
+|  3 |   12 | 1806  |
+|  4 |   12 | 1806  |
++----+------+-------+
+4 rows in set (0.00 sec)
+
+mysql> select * from t221 where id=3;
++----+------+-------+
+| id | age  | class |
++----+------+-------+
+
+|  3 |   12 | 1806  |
++----+------+-------+
+1 row in set (0.00 sec)
+
+mysql> create table jfb(fname char(10),pay float(7,2) default 28000) engine=innodb;
+Query OK, 0 rows affected (0.22 sec)
+
+mysql> insert into jfb(fname) values("bob");
+Query OK, 1 row affected (0.05 sec)
+
+mysql> insert into jfb(fname) values("tom");
+Query OK, 1 row affected (0.02 sec)
+
+mysql> insert into jfb(fname) values("lucy");
+Query OK, 1 row affected (0.02 sec)
+
+mysql> select * from jfb;
++-------+----------+
+| fname | pay      |
++-------+----------+
+| bob   | 28000.00 |
+| tom   | 28000.00 |
+| lucy  | 28000.00 |
++-------+----------+
+3 rows in set (0.00 sec)
+
+
