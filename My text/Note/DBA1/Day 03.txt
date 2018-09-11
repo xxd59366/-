@@ -28,13 +28,18 @@ Day 03 MySQL存储引擎 、 数据导入导出 管理表记录 匹配条件
       - 支持行级锁
       - 支持事务,事务回滚,外键
     · 相关的表文件
-      - 表名.frm,表名.ibd
-        - ibdata1
-        - ib_logfile0
-        - ib_logfile1
-    - 事务:一次SQL操作从开始建立连接 执行各种sql命令 到断开连接的过程
-    - 事务回滚:事务执行时,任意一步出操作没有成功,会恢复之前的所有操作(通过事务日志文件)
-    - 行级锁:只锁定某一行
+      - 表名.frm,表名.ibd :索引和数据(共享表空间)
+      - ibdata1
+      - ib_logfile0
+      - ib_logfile1
+      
+  1.写操作多的表:适合使用innodb存储引擎 这样并发访问量大
+  2.查询操作多的表:适合使用myisam存储引擎 节省系统资源
+      
+     · 事务:一次SQL操作从开始建立连接 执行各种sql命令 到断开连接的过程
+     · 事务回滚:事务执行时,任意一步出操作没有成功,会恢复之前的所有操作(通过事务日志文件)
+     · 行级锁:只锁定某一行
+  
   myisam引擎表空间文件:
     frm:表结构
     MYI:表的索引数据(独享表空间)
@@ -64,31 +69,46 @@ Day 03 MySQL存储引擎 、 数据导入导出 管理表记录 匹配条件
   - 事务操作是互相隔离不受影响的
 4.持久性
   - 数据一旦提交,不可改变,永久改变表数据
-四.
-1.写操作多的表:适合使用innodb存储引擎 这样并发访问量大
-2.查询操作多的表:适合使用myisam存储引擎 节省系统资源
-五.数据管理
-1.数据导入:把系统文件内容存储到数据库服务器的表里
-2.系统文件内容不可以杂乱无章,必须有一定格式
+
+四.数据管理
+1.设置搜索路径
+· 查看默认使用目录及目录是否存在
+  mysql> show variables like "secure_file_priv"
+· 修改目录及查看修改结果
+  mkdir /myload;chown mysql /myload
+  vim /etc/my.cnf
+  [mysqld]
+  secure_file_priv="/myload"
+2.数据导入:把系统文件内容存储到数据库服务器的表里
+  1)建表
+    mysql> create table user(
+        -> name char(30),
+        -> password char(1),
+        -> uid int(2),
+        -> gid int(2),
+        -> comment char(150),
+        -> homedir char(150),
+        -> shell char(30),
+        -> index(name)
+        -> );
+  2)导入
+    mysql> load data infile "/var/lib/mysql-files/passwd"
+        -> into table db3.user
+        -> fields terminated by ":"
+        -> lines terminated by "\n";
+3.数据导出
+  · 注意:系统文件内容不可以杂乱无章,必须有一定格式
+        字段分隔要与文件内的一致
+        指定导入文件的绝对路径
+        导入数据的表字段类型要与文件字段匹配
+        禁用Selinux
 
 把系统用户信息存储到数据库服务器
 3.在mysql中使用系统命令
 system cp /etc/passwd /var/lib/mysql-files/
 
-mysql> create table user(
-    -> name char(30),
-    -> password char(1),
-    -> uid int(2),
-    -> gid int(2),
-    -> comment char(150),
-    -> homedir char(150),
-    -> shell char(30),
-    -> index(name)
-    -> );
 
-mysql> load data infile "/var/lib/mysql-files/passwd"
-    -> into table db3.user
-    -> fields terminated by ":"
-    -> lines terminated by "\n";
+
+
 
 
