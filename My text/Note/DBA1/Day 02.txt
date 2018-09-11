@@ -442,4 +442,30 @@ mysql> select * from jfb;
 +-------+----------+
 3 rows in set (0.00 sec)
 
+mysql> use db1;
+mysql> show create table xsb;
+mysql> alter table xsb drop foreign key xsb_ibfk_1;
+mysql> insert into xsb(xname) values("jerry");
+mysql> select * from xsb;
+
+mysql> create table xfb(
+    -> name char(10) primary key,
+    -> pay float(7,2))
+    -> engine=innodb;
+mysql> insert into xfb values("bob",28800);
+mysql> insert into xfb values("lucy",26800);
+mysql> select * from xfb;
++------+----------+
+| name | pay      |
++------+----------+
+| bob  | 28800.00 |
+| lucy | 26800.00 |
++------+----------+
+2 rows in set (0.00 sec)
+
+mysql> create table xsb(
+    -> xname char(10),
+    -> sex enum("boy","girl") default "girl",
+    -> foreign key (xname) references xfb(name) on update cascade on delete cascade)
+    -> engine=innodb;
 

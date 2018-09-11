@@ -1,0 +1,77 @@
+Day 03 MySQL存储引擎 、 数据导入导出 管理表记录 匹配条件
+
+一.MySQL存储引擎
+
+1.MySQL工作原理
+
+· MySQL体系结构
+连接池 SQL接口 分析器 优化器 查询缓存
+
+· MySQL存储引擎
+  
+  show engines\G
+
+  默认的存储引擎
+  - MySQL 5.0/5.1 --> MyISAM
+  - MySQL 5.5/5.6 --> InnoDB
+  InnoDB存储引擎的特点:
+    - 事务:一次SQL操作从开始建立连接 执行各种sql命令 到断开连接的过程
+    - 事务回滚:事务执行时,任意一步出操作没有成功,会恢复之前的所有操作(通过事务日志文件)
+    - 行级锁:只锁定某一行
+  myisam引擎表空间文件:
+    frm:表结构
+    MYI:表的索引数据(独享表空间)
+    MYD:表数据(独享表空间)
+  innodb引擎表空间文件:
+    ibd:索引和数据(共享表空间)
+    frm
+  memory特点:
+    frm:所有信息都在一个文件中
+
+二.MySQL锁机制
+
+1.锁粒度
+  - 表级锁:一次直接对整张表进行加锁
+  - 行级锁:只锁定某一行
+  - 页级锁:对整个页面(MySQL管理数据的基本存储单位)进行加锁[指内存数据]
+2.锁类型
+  - 读锁(共享锁):支持并发读
+  - 写锁(互斥锁,排它锁):是独占锁,上锁期间其他线程不能读表或写表
+
+三.事务特性(ACID)
+1.原子性
+  - 事务的整个操作是一个,整体,不可分割.要么全部成功,要么全部失败
+2.一致性
+  - 事务操作的前后表中记录没有变化
+3.隔离性
+  - 事务操作是互相隔离不受影响的
+4.持久性
+  - 数据一旦提交,不可改变,永久改变表数据
+四.
+1.写操作多的表:适合使用innodb存储引擎 这样并发访问量大
+2.查询操作多的表:适合使用myisam存储引擎 节省系统资源
+五.数据管理
+1.数据导入:把系统文件内容存储到数据库服务器的表里
+2.系统文件内容不可以杂乱无章,必须有一定格式
+
+把系统用户信息存储到数据库服务器
+3.在mysql中使用系统命令
+system cp /etc/passwd /var/lib/mysql-files/
+
+mysql> create table user(
+    -> name char(30),
+    -> password char(1),
+    -> uid int(2),
+    -> gid int(2),
+    -> comment char(150),
+    -> homedir char(150),
+    -> shell char(30),
+    -> index(name)
+    -> );
+
+mysql> load data infile "/var/lib/mysql-files/passwd"
+    -> into table db3.user
+    -> fields terminated by ":"
+    -> lines terminated by "\n";
+
+
