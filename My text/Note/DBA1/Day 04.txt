@@ -1,0 +1,175 @@
+Day 04 多表查询 MySQL管理工具 、 用户授权及撤销
+
+一、复制表
+	1.将源表xxx复制为yyy
+		create table yyy select * from xxx;
+	2.将指定的查询结果复制为新表zzz
+		create table zzz SQL查询语句
+		>create table zzuser
+		->select user,host,password from mysql.user;
+	3.复制源表xxx的结构到新表vvv
+		create table vvv select * from xxx where false;
+	4.将源表vvv的名称改为www
+		alter table vvv rename to www;
+
+二、多表查询
+	1.多表查询概述
+		· 多表查询，也称为连接查询
+			- 将两个或两个以上的表 按某个条件连接起来，从选取需要的数据
+			- 当多个表中存在相通意义的字段（字段名可以不同）时，可以通过该字段连接多个表
+	2.多表查询格式
+		· 格式1
+			> select 字段名列表 from 表a,表b;
+		· 格式2
+			> select 字段名列表 from 表a,表b where 条件;
+		* 以上格式的查询结果叫笛卡尔集，查询结果的总条目数量=
+		（表a的记录数 * 表b的记录数）
+		
+	3.where子查询
+		· 使用where子查询
+			- 把内层查询结果作为外层查询的查询条件
+		· 语法格式
+			> select 字段名列表 from 表名
+			-> where 条件
+			->(select 字段名列表 from 表名 where 条件);
+			- 输出年龄小于平均年龄的学生的名字和年龄
+			> select name,age from student where age < (select avg(age) from student);
+	4.左连接查询
+		· 基本用法
+			> select 字段名列表 from
+			-> 表a left join 表b on 条件表达式;
+	5.右连接查询
+		· 基本用法
+		> select 字段名列表 from
+		-> 表a right join 表b on 条件表达式;
+	* 左右连接的区别：
+		简而言之
+		左连接中where只影响右边表
+		右连接中where只影响左边表
+		
+三、MySQL管理工具
+	
+	1.MySQL管理方式
+		· mysql命令的局限性？
+		· 是否有图形化、更加直观的管理软件
+		· 能否通过Web界面访问
+	2.常见的MySQL管理工具
+		· 常见的管理工具
+		  类型                              界面         操作系统                         说明
+		  mysql                           命令行        跨平台                 MySQL官方bundle包自带
+		  MySQL-Workbench      图形           跨平台                  MySQL官方提供
+		  MySQL-Front                图形           Windows             开源，轻量级客户端
+		  phpMyAdmin               浏览器        跨平台                  开源，需LAMP平台
+		  Navicat                         图形           Windows             专业、功能强大、商业版
+		  
+	3.一些工具的安装
+		· phpMyAdmin
+			1.安装httpd,mysql,php-mysql及相关包
+			2.启动httpd服务程序
+			3.解压phpMyAdmin包，部署到网站目录
+			4.配置config.inc.php,指定MySQL主机地址
+			5.创建授权用户
+			6.浏览器访问、登录使用
+##############################################
+		# yum -y install httpd php php-mysql
+		# systemctl start httpd;systemctl enabled httpd
+		
+		# tar -xf phpMyAdmin-2.11.11-all-languages.tar.gz -C /var/www/html/
+		# cd /var/www/html
+		# mv phpMyAdmin-2.11.11-all-languages/phpmyadmin
+		# chown -R apache:apache phpmyadmin/
+		# cp phpmyadmin/config.sample.inc.php phpmyadmin/config.inc.php
+		
+		# sed -n '17p;31p' /var/www/html/phpmyadmin/config.inc.php
+		$cfg['blowfish_secret'] = 'plj123';
+		$cfg['Servers'][$i]['host'] = 'localhost';
+		
+##################################################
+
+四、用户授权及权限撤销
+
+	1.密码恢复及设置
+		· 恢复MySQL管理密码
+		  密码忘了怎么办？
+		  1.停止MySQL服务程序
+		  2.跳过授权表启动MySQL服务程序
+			skip-grant-tables——写入/etc/my.cnf配置文件
+		  3.重设root密码（更新user表记录）
+		  4.以正常方式重启MySQL服务程序
+		· 操作流程
+			# vim /etc/my.cnf
+			[mysqld]
+			......
+			skip-grant-tables
+			:wq
+			# systemctl restart mysqld
+			# mysql
+			mysql> update mysql.user set authentication_string=password("888888")
+			-> where
+			-> user="root" and host="localhost";
+			mysql> flush privileges;
+			mysql> quit
+			# vim /etc/my.cnf
+			[mysqld]
+			......
+			#skip-grant-tables
+			
+			# systemctl restart mysqld
+			# mysql -uroot -p888888
+	2.在Shell命令行修改登录密码
+		- 需要验证旧密码
+		- 不适用于跳过授权表启动的情况
+			# mysqladmin -uroot -p password "新密码"
+			Enter password://输入旧密码
+			mysqladmin:[Warning] Using a password on the command line inerface can be insecure.
+			Warning:Since passwordwill be sent to server in plain text,use ssl connection to ensure password safety.
+
+	3.创建授权
+		· MySQL授权库和表信息
+			- user表，存储授权用户的访问权限
+			- db表，存储授权用户对数据库的访问权限
+			- tables_priv表，存储授权用户对表的访问权限
+			- columns_priv表，存储授权用户对字段的访问权限
+			
+		· grant 权限列表.. .. on 库名.表名
+		to 用户名@'客户端地址'
+		identified by '密码'————设置密码
+		[with grant option]————是否有授权权限
+		
+		· 注意事项
+			- 当库名.表名 为*.*时，匹配所有库所有表
+			- 授权设置存放在mysql库的user表
+			
+		· 权限列表
+			- all：匹配所有权限
+			- select，update，insert
+			- select，update（字段1，.. ..，字段N）
+		
+		· 客户端地址
+			- %：匹配所有主机
+			- 192.168.1.%：匹配指定的一个网段
+			- 192.168.1.1：匹配指定IP地址的单个主机
+			- %.tarena.com：匹配一个DNS区域
+			- svr1.tarena.com：匹配指定域名的单个主机
+			
+		· 查看用户授权
+			· 用户查看自己的权限
+			mysql> show grants;
+			· 管理员可查看其它用户的权限
+			mysql> show grants for 用户名@'客户端地址';
+		· 重设用户密码
+			· 授权用户连接后修改密码
+			mysql> set password=password("新密码");
+			· 管理员重置授权用户连接密码	
+			mysql> set password
+			        -> for 用户名@'客户端地址'=password("新密码");
+	4.撤销授权
+		· 撤销用户权限
+			· 基本用法
+			mysql> revoke 权限列表 on 库名.表名
+			        -> from 用户名@"客户端地址";
+			        
+			
+			
+		· 
+			
