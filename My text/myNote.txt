@@ -1224,7 +1224,7 @@ d)	防火墙对源ip地址的控制
 · Telnet:23
 · SMTP:25
 · DNS:53
-· DHCP:67/68
+· DHCP:UDP 67/68
 · tftp:69
 · http：80
 · NTP:123
