@@ -1,0 +1,221 @@
+Day 05 数据备份，数据恢复
+
+一、mysqldump备份/恢复
+
+1.数据库备份概述：
+    1）数据备份方式
+    · 物理备份
+        - 冷备：cp,tar,.. ..
+    · 逻辑备份
+        - mysqldump
+        - mysql
+    2）数据备份策略
+    · 完全备份
+        - 备份所有数据
+    · 增量备份
+        - 备份上次备份后，所有新产生新的数据
+    · 差异备份
+        - 备份完全备份后，所有新产生的数据
+        
+2.物理备份
+    1）物理备份及操作
+    · 备份操作
+        - cp -rp /var/lib/mysql/数据库  备份目录/文件名
+        - tar -zcvf xxx.tar.gz /var/lib/mysql/数据库/*
+    · 恢复操作
+        - cp -rp 备份目录/文件名 /var/lib/mysql/
+        - tar -zxvf xxx.tar.gz -C /var/lib/mysql/数据库名/
+        
+3.逻辑备份
+    1）逻辑备份及恢复
+    · 备份操作
+        - mysqldump -uroot -p密码 库名 > 路径/xxx.sql
+    · 恢复操作
+        - mysql -uroot -p密码 库名 < 路径/xxx.sql
+    · 库名表示方式
+        - --all-databases 或 -A          所有库
+        - 数据库名                               单个库
+        - 数据库名 表名                       单张表
+        - -B 数据库1 数据库2              多个库
+    · 注意事项
+        - 无论备份还是恢复，都要验证用户权限
+    · 应用实例
+        - 将所有的库备份为mysql-all.sql文件
+        - 将userdb库备份为userdb.sql文件
+        # mysqldump -u root -p --all-databases > alldb.sql
+        Enter password:
+        # mysqldump-uroot -p userdb > userdb.sql
+        Enter password:
+        # ls lh *.sql
+    · 应用实例2
+        - 从备份文件userdb.sql重建userdb3库
+    · 实现思路
+        - 先建空库，在执行mysql导入
+        mysql > create database userdb3;
+        # mysql -u root -p userdb3 < userdb.sql
+        Enter password:
+
+二.实时增量备份/恢复
+    1.binlog简介
+        1）binlog日志概述
+        · 二进制日志用途及配置方式
+            类型                          用途                        配置
+      二进制日志       记录所有更改数据的操作   log_bin[=dir/name];server_id=数字;max_binlog_size=数字m
+    2.使用binlog日志
+        1）使用binlog日志
+        · 采用binlog日志的好处
+            - 记录除查询之外的所有SQL命令
+            - 可用于数据恢复
+            - 配置mysql主从同步的必要条件
+            # vim /etc/my.cnf
+            [mysqld]
+            .. ..
+            log_bin                                                     //启用binlog日志
+            server_id=100                                         //指定id值
+            
+            # systemctl restart mysqld
+        · binlog相关文件
+            - 主机名-bin.index                             记录已有日志文件名
+            - 主机名-bin.000001                          第一个二进制日志
+            - bin.000002                                      第二个二进制日志
+            - .. ..
+            
+            手动生成新的日志文件：
+            1.重启mysql服务
+            2.执行SQL操作 mysql > flush logs;
+            3.mysqldump --flush-logs
+            4.mysql -uroot -p密码 -e 'flush logs'
+        2）清理binlog日志
+        · 删除早于指定版本的binlog日志
+            - purge master logs to "binlog文件名"
+        · 删除所有binlog日志，重建新日志
+            - reset master;
+            > purge master logs to 'mysql-bin.000003';
+            > reset master;
+        3）分析binlog日志
+    · 查看日志当前记录格式
+    > show variables like "binlog_format";
+    · 修改日志记录格式
+    # vim /etc/my.cnf
+    [mysqld]
+    .. ..
+    binlog_format=mixed
+    
+    # systemctl restart mysqld
+    · 使用mysqlbinlog工具
+        - 格式：mysqlbinlog [选项] binlog 日志文件名
+    · 常用选项
+        - --start-datetime="yyyy-mm-dd hh:mm:ss"
+        - --stop-datetime="yyyy-mm-dd hh:mm:ss"
+        - --start-position=数字
+        - --stop-position=数字
+    · 应用实例
+        - 查看从2014年1月2日15:30开始的更改操作
+        #mysqlbinlog \
+        --start-datetime="2014-01-02 15:30" /var/lib/mysql/mysql-bin.000001
+        .. ..
+        # at 318.. ..
+        create database newdb2;
+        # at 418.. ..
+        drop database newdb;
+        .. ..
+        
+    3.binlog数据恢复
+    · 基本思路
+        - 使用mysqlbinlog提取历史SQL操作
+        - 通过管道交给mysql命令执行
+    · 应用实例
+        - 执行第一份binlog所记录的更改操作
+        # cd /var/lib/mysql/
+        # mysqlbinlog mysql-bin.000001 | mysql -uroot -p123456
+        
+
+####################################
+
+1.完全备份
+备份：mysqldump命令
+恢复：mysql命令
+
+2.增量备份/恢复
+1.启用mysql服务的binlog日志 实现增量备份
+2.安装第三方软件，提供innobackupex命令做增量备份/恢复
+
+· 数据备份的目的？误操作（管理者 使用者）
+                             硬件损坏    磁盘
+· 数据备份方式：
+· 物理备份：直接拷贝库和被对应的系统文件(只适合小量备份)
+
+cp -rp /var/lib/mysql       /opt/mysqldir.bak
+cp -rp /var/lib/mysql/mysql         /opt/mysql.bak
+cp -rp /car/lib/mysql/bbsdb/t1.*        /opt/
+tar -zcvf   /opt/mysql.tar.gz       /var/lib/mysql/*
+
+rm -rf /var/lib/mysql/mysql
+
+cp  /opt/mysql.bak      /var/lib/mysql/mysql
+chown -R mysql:mysql /var/lib/mysql/mysql
+systemctl restart mysqld
+
+逻辑备份：执行备份操作时，根据备份的库表产生对应的sql命令，把sql命令存储到指定的文件里。
+
+db1.user
+create table user();
+insert
+
+· 数据备份策略：
+完全备份：备份所有数据（一台服务器所有的数据
+                                        一个库的所有数据
+                                        一张表的所有数据）
+只备份新产生的数据：
+差异备份：备份完全备份后所有新产生的数据
+增量备份：备份上次备份后所有新产生的数据
+增量
+差异
+完全
+
+生产环境下对数据做备份的方法
+crond   执行  备份脚本（shell python go ruby perl）
+搭建MySQL主从结构实现数据的自动备份
+
+使用脚本对数据做备份要考虑的问题
+
+备份频率
+备份策略    完全+增量   完全+差异
+备份时间    数据库访问量少时
+备份文件名   日期_xx.sql
+存储空间    lv + raid
+
+                t1      数据  23:00   文件名     备份量
+
+1   完全              10                  1.sql       10
+2   差异              2                    2.sql        2
+3                        5                    3.sql        7
+4                        3                    4.sql        10
+5                        1                    5.sql        11
+6                        4                    6.sql        15
+7   差异              9                    7.sql        24
+
+# mysqldump -uroot -p db1 > db1.sql
+Enter passwd:
+
+逻辑备份及恢复（续1）
+· 源库名的表示
+- --all-databases或-A            所有库
+- 数据库名                               单个库
+- 数据库名  表名                      单张表
+- -B    数据库1    数据库2        备份多个库
+
+# mysqldump -uroot -p123456 db1 user > /mybakdata/db1_user.sql
+# ls /mybakdata/
+# mysqldump -uroot -p123456 -A > /mybakdata/all.sql
+# mysqldump -uroot -p123456 -B db1 db2 > /mybakdata/twodb.sql
+· 注意事项
+    - 无论备份还是回复，都要验证用户及权限
+    - 备份完后，要看看文件内是否有内容
+· 数据还原命令
+musql命令 完全恢复数据
+mysl -uroot -p123456 [库名] < 目录名/xxx.sql
+
+> select * from 
+# mysql -uroot -p123456 db1 < db1_user.sql
+# mysql

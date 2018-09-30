@@ -1,0 +1,112 @@
+Day 06 插件工具使用
+
+一、innobackupex备份/恢复
+
+1.MySQL备份工具
+    1）常用的MySQL备份工具
+    · 物理备份缺点
+        - 跨平台性差
+        - 备份时间长，冗余备份，浪费存储空间
+    · mysqldump备份缺点
+        - 效率较低，备份和还原速度慢
+        - 备份过程中，数据插入和更新操作会被挂起
+    2）XtraBackup工具
+    · 一款强大的在线热备份工具
+        - 备份过程中不锁库表，适合生产环境
+        - 由专业组织Percona提供（改进MySQL分支）
+    · 主要含两个组件
+        - xtrabackup : C程序，支持InnoDB/XtraDB
+        - innobackupex : 以Perl脚本封装xtrabackup，还支持MyISAM
+        
+2.安装percona
+    1）安装percona
+    · 下载适配的rpm包并安装
+        - percona-xtrabackup-24-2.4.7-1.el7.x86_64.rpm
+        # yum -y install perl-Digest-MD5.x86_64 rsync perl-DBD-MySQL
+        # rpm -ivh libev-4.15-1.el6.rf.x86_64.rpm
+        # rpm -ivh percona-xtrabackup-24-2.4.7-1.el7.x86_64.rpm
+        # rpm -ql percona-xtrabackup-24
+        /usr/bin/innobackupex                   //备份innodb,xtrdb,myisam引擎的表
+        /usr/bin/xtrabackup                        //备份innodb,xtradb引擎的表
+    · innobackupex基本选项
+        --host                  主机名
+        --user                  用户名
+        --port                  端口号
+        --password         密码
+        --databases        数据库名
+        --no-timestamp 不用日期命名备份文件存储的子目录名
+        
+    注意：
+    --databases="库名"                //单个库
+    --databases="库1 库2"           //多个库
+    --databases="库.表"               //单个表
+    
+        --redo-only                                       日志合并
+        --apply-log                                       准备还原（回滚日志）
+        --copy-back                                      恢复数据
+        --incremental 目录名                       增量备份
+        --incremental-basedir=目录名        增量备份时，指定上一次备份数据存储的目录名
+        --incremental-dir=目录名                准备恢复数据时，指定增量备份数据存储的目录名
+        --export                                            导出表信息
+        import                                               导入表空间
+        
+3.innobk应用案例
+    1）完全备份与恢复
+    · 应用实例：将所有库完全备份到/backup
+    # innobackupex --user root --password 123456 /backup --no-timestamp                 //完全备份
+    # innobackupex --user root --password 123456 --apply-log /backup                        //准备恢复数据
+    
+    # rm -rf /var/lib/mysql            //恢复时要求空的库目录
+    # mkdir /var/lib/mysql
+    # innobackupex --user root --password 123456 --copy-back /backup
+    # chown -R mysql:mysql /var/lib/mysql
+    
+    # systemctl restart mysqld
+    # mysql -uroot -p123456
+    > show databases;
+    
+    2）增量备份与恢复
+    · 应用实例
+        - 增量备份时，必须先有一次备份，通常是完全备份
+        # innobackupex --user root --password 123456 \
+        --databases ="库名列表" /fullbak --no-timestamp             //完全备份
+        # innobackupex --user root -password 123456 \
+        --databases ="库名列表" --incremental /new1 \
+        --incremental-basedir="/fullbak" --no-timestamp         //第一次增量备份
+        # innobackupex --user root --password 123456 \
+        --databases="库名列表" --incremental /new2 \
+        --incremental-basedir="/new1" --no-timestamp            //第二次增量备份
+        
+        # rm -rf /var/lib/mysql ; mkdir /var/lib/mysql/
+        # innobackupex --user root --password 123456 \
+        --database = "库名列表" --apply-log --redo-only /fullbak                                        //完整恢复
+        
+        #innobackupex --user root --password 123456 \
+        --databases = "库名列表" --apply-log --redo-only /fullbak \
+        --incremental-dir="/new1"           //恢复增量
+        
+        #innobackupex --user root --password 123456 \
+        --databases = "库名列表" --apply-log --redo-only /fullbak \
+        --incremental-dir="/new2"           //恢复增量
+        
+        # chown -R mysql:,mysql /var/lib/mysql/
+        # systemctl stop mysqld ; systemctl start mysqld
+        
+    3）在完全备份文件中恢复单个表
+        - 完全备份数据库到/allbak目录
+        - 导出表信息
+        # innobackupex --user root --password 123456 --databases="gamedb" /allbak --no-timestamp
+        
+        > drop table gamedb.a;
+        # innobackupex --user root --password 123456 --databases="gamedb" -apply-log --export /allbak                                       //导出表信息
+        
+        > create table gamedb.a(id int);        //创建表
+        > alter table gamedb.a discard tablespace;                                                                //删除表空间
+        
+        > system cp /allbak/gamedb/a.{ibd,cfg,exp} /var/lib/mysql/gamedb                       //拷贝表信息文件
+        > system chown mysql:mysql /var/lib/mysql/bbsdb/a.*                                            //修改所有者
+        > alter table gamedb.a import tablespace;                                                                  //导入表空间
+        > select * from gamedb.a;
+        
+        
+        
