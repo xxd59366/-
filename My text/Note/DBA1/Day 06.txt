@@ -43,12 +43,12 @@ Day 06 插件工具使用
     
         --redo-only                                       日志合并
         --apply-log                                       准备还原（回滚日志）
-        --copy-back                                      恢复数据
-        --incremental 目录名                       增量备份
-        --incremental-basedir=目录名        增量备份时，指定上一次备份数据存储的目录名
-        --incremental-dir=目录名                准备恢复数据时，指定增量备份数据存储的目录名
-        --export                                            导出表信息
-        import                                               导入表空间
+        --copy-back                                       恢复数据
+        --incremental 目录名                               增量备份
+        --incremental-basedir=目录名                       增量备份时，指定上一次备份数据存储的目录名
+        --incremental-dir=目录名                           准备恢复数据时，指定增量备份数据存储的目录名
+        --export                                          导出表信息
+        import                                            导入表空间
         
 3.innobk应用案例
     1）完全备份与恢复
@@ -89,7 +89,7 @@ Day 06 插件工具使用
         --databases = "库名列表" --apply-log --redo-only /fullbak \
         --incremental-dir="/new2"           //恢复增量
         
-        # chown -R mysql:,mysql /var/lib/mysql/
+        # chown -R mysql:mysql /var/lib/mysql/
         # systemctl stop mysqld ; systemctl start mysqld
         
     3）在完全备份文件中恢复单个表
