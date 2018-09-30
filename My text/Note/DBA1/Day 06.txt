@@ -100,12 +100,12 @@ Day 06 插件工具使用
         > drop table gamedb.a;
         # innobackupex --user root --password 123456 --databases="gamedb" -apply-log --export /allbak                                       //导出表信息
         
-        > create table gamedb.a(id int);        //创建表
+        > create table gamedb.a(id int);                                                                          //创建表
         > alter table gamedb.a discard tablespace;                                                                //删除表空间
         
-        > system cp /allbak/gamedb/a.{ibd,cfg,exp} /var/lib/mysql/gamedb                       //拷贝表信息文件
-        > system chown mysql:mysql /var/lib/mysql/bbsdb/a.*                                            //修改所有者
-        > alter table gamedb.a import tablespace;                                                                  //导入表空间
+        > system cp /allbak/gamedb/a.{ibd,cfg,exp} /var/lib/mysql/gamedb                                          //拷贝表信息文件
+        > system chown mysql:mysql /var/lib/mysql/bbsdb/a.*                                                       //修改所有者
+        > alter table gamedb.a import tablespace;                                                                 //导入表空间
         > select * from gamedb.a;
         
         
