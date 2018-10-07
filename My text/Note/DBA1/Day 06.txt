@@ -26,7 +26,7 @@ Day 06 插件工具使用
         # rpm -ivh libev-4.15-1.el6.rf.x86_64.rpm
         # rpm -ivh percona-xtrabackup-24-2.4.7-1.el7.x86_64.rpm
         # rpm -ql percona-xtrabackup-24
-        /usr/bin/innobackupex                   //备份innodb,xtrdb,myisam引擎的表
+        /usr/bin/innobackupex                      //备份innodb,xtrdb,myisam引擎的表
         /usr/bin/xtrabackup                        //备份innodb,xtradb引擎的表
     · innobackupex基本选项
         --host                  主机名
