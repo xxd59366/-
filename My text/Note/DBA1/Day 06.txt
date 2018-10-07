@@ -32,13 +32,13 @@ Day 06 插件工具使用
         --host                  主机名
         --user                  用户名
         --port                  端口号
-        --password         密码
-        --databases        数据库名
+        --password              密码
+        --databases             数据库名
         --no-timestamp 不用日期命名备份文件存储的子目录名
         
     注意：
     --databases="库名"                //单个库
-    --databases="库1 库2"           //多个库
+    --databases="库1 库2"             //多个库
     --databases="库.表"               //单个表
     
         --redo-only                                       日志合并
@@ -54,9 +54,9 @@ Day 06 插件工具使用
     1）完全备份与恢复
     · 应用实例：将所有库完全备份到/backup
     # innobackupex --user root --password 123456 /backup --no-timestamp                 //完全备份
-    # innobackupex --user root --password 123456 --apply-log /backup                        //准备恢复数据
+    # innobackupex --user root --password 123456 --apply-log /backup                    //准备恢复数据
     
-    # rm -rf /var/lib/mysql            //恢复时要求空的库目录
+    # rm -rf /var/lib/mysql                                                             //恢复时要求空的库目录
     # mkdir /var/lib/mysql
     # innobackupex --user root --password 123456 --copy-back /backup
     # chown -R mysql:mysql /var/lib/mysql
@@ -69,25 +69,25 @@ Day 06 插件工具使用
     · 应用实例
         - 增量备份时，必须先有一次备份，通常是完全备份
         # innobackupex --user root --password 123456 \
-        --databases ="库名列表" /fullbak --no-timestamp             //完全备份
+        --databases ="库名列表" /fullbak --no-timestamp                                                  //完全备份
         # innobackupex --user root -password 123456 \
         --databases ="库名列表" --incremental /new1 \
-        --incremental-basedir="/fullbak" --no-timestamp         //第一次增量备份
+        --incremental-basedir="/fullbak" --no-timestamp                                                 //第一次增量备份
         # innobackupex --user root --password 123456 \
         --databases="库名列表" --incremental /new2 \
-        --incremental-basedir="/new1" --no-timestamp            //第二次增量备份
+        --incremental-basedir="/new1" --no-timestamp                                                    //第二次增量备份
         
         # rm -rf /var/lib/mysql ; mkdir /var/lib/mysql/
         # innobackupex --user root --password 123456 \
-        --database = "库名列表" --apply-log --redo-only /fullbak                                        //完整恢复
+        --database = "库名列表" --apply-log --redo-only /fullbak                                         //完整恢复
         
         #innobackupex --user root --password 123456 \
         --databases = "库名列表" --apply-log --redo-only /fullbak \
-        --incremental-dir="/new1"           //恢复增量
+        --incremental-dir="/new1"                                                                       //恢复增量
         
         #innobackupex --user root --password 123456 \
         --databases = "库名列表" --apply-log --redo-only /fullbak \
-        --incremental-dir="/new2"           //恢复增量
+        --incremental-dir="/new2"                                                                       //恢复增量
         
         # chown -R mysql:mysql /var/lib/mysql/
         # systemctl stop mysqld ; systemctl start mysqld
