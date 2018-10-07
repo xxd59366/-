@@ -34,7 +34,7 @@ Day 06 插件工具使用
         --port                  端口号
         --password              密码
         --databases             数据库名
-        --no-timestamp 不用日期命名备份文件存储的子目录名
+        --no-timestamp          不用日期命名备份文件存储的子目录名
         
     注意：
     --databases="库名"                //单个库
