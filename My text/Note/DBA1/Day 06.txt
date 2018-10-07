@@ -81,11 +81,11 @@ Day 06 插件工具使用
         # innobackupex --user root --password 123456 \
         --database = "库名列表" --apply-log --redo-only /fullbak                                         //完整恢复
         
-        #innobackupex --user root --password 123456 \
+        # innobackupex --user root --password 123456 \
         --databases = "库名列表" --apply-log --redo-only /fullbak \
         --incremental-dir="/new1"                                                                       //恢复增量
         
-        #innobackupex --user root --password 123456 \
+        # innobackupex --user root --password 123456 \
         --databases = "库名列表" --apply-log --redo-only /fullbak \
         --incremental-dir="/new2"                                                                       //恢复增量
         
