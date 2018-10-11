@@ -1,0 +1,39 @@
+﻿一、安装VMWare出现问题
+症状一：
+安装时出现问题： runtime DLL出错
+解决方法：
+在运行报错情况下，
+win+r打开运行，输入全局变量%temp%
+进入AppData>Local>temp目录下
+找到安装程序直接运行
+
+错误原理：不明
+
+症状二：
+注册vmware时显示没有权限输入许可证，无论以管理员启动还是修改安全权限均无效
+
+管理员权限运行命令行模式
+cd /d e:                                            切换盘符
+cd e:\VMWare\x64                           切换至工作路径
+vmware-vmx.exe --new-sn ZV7TK-04F9J-H88FZ-YYPZC-XLRR4     注册
+
+用powershell注册好像没用
+
+错误原理：不明
+
+二、通过修改注册表永久禁用Windows Defender
+win+r -> regedit打开注册表
+路径：
+HKEY_LOCAL_MACHINE \ SOFTWARE \ Policies \ Microsoft \ Windows Defender
+创建DWORD（32位）注册表值。
+右侧空白区域右键-新建-DWORD（32位）值，命名它为DisableAntiSpyware。
+修改数值为1，因0代表启用，1代表禁用。
+点确定关闭注册表。
+重启电脑Windows Defender已经不会在开机启动了。
+
+三、关闭windows update
+记得用管理员权限打开。步骤如下：
+1.win键，找到windows系统。
+2.右键“命令提示符”，选择“更多”，选择“以管理员身份运行”。
+3.输入
+REG add "HKLM\SYSTEM\CurrentControlSet\Services\WaaSMedicSvc" /v "Start" /t REG_DWORD /d "4" /f
