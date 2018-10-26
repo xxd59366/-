@@ -71,5 +71,6 @@ commit
 ;;
 *)
 echo 请输入选项
+exit 99
 ;;
 esac
