@@ -75,6 +75,10 @@
 		wget -O /etc/yum.repos.d/CentOS7-Base-163.repo http://mirrors.163.com/.help/CentOS7-Base-163.repo
 		
 	4.将原本的repo文件丢进repos目录防止Yum冲突
+	
+	
+	
+驱动不兼容-->内核
 
 
 

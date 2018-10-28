@@ -1,0 +1,117 @@
+Zabbix监控Tomcat详细指标
+堆内存监控
+名称：堆内存最大值
+键值：jmx["java.lang:type=Memory","HeapMemoryUsage.max"]
+名称：已提交堆内存
+键值：jmx["java.lang:type=Memory","HeapMemoryUsage.committed"]
+名称：已用堆内存
+键值：jmx["java.lang:type=Memory","HeapMemoryUsage.used"]
+
+内存池old gen监控
+名称：内存池old gen使用空间
+键值：jmx["java.lang:type=MemoryPool,name=PS Old Gen",Usage.used]
+名称：内存池old gen已提交空间
+键值：jmx["java.lang:type=MemoryPool,name=PS Old Gen",Usage.committed]
+名称：内存池old gen最大空间
+jmx["java.lang:type=MemoryPool,name=PS Old Gen",Usage.max]
+
+内存池survivor space监控
+名称：内存池survivor space使用空间
+键值：jmx["java.lang:type=MemoryPool,name=PS Survivor Space",Usage.used]
+名称：内存池survivor space已提交空间
+键值：jmx["java.lang:type=MemoryPool,name=PS Survivor Space",Usage.committed]
+名称：内存池survivor space最大空间
+jmx["java.lang:type=MemoryPool,name=PS Survivor Space",Usage.max]
+
+内存池eden space监控
+名称：eden space已用空间
+键值：jmx["java.lang:type=MemoryPool,name=PS Eden Space",Usage.used]
+名称：eden space已提交空间
+键值：jmx["java.lang:type=MemoryPool,name=PS Eden Space",Usage.committed]
+名称：eden space最大空间
+jmx["java.lang:type=MemoryPool,name=PS Eden Space",Usage.max]
+
+内存池meta space监控
+名称：meta space已用空间
+键值：jmx["java.lang:type=MemoryPool,name=Metaspace",Usage.used]
+名称：meta space已提交空间
+键值：jmx["java.lang:type=MemoryPool,name=Metaspace",Usage.committed]
+名称：meta space最大空间
+键值：jmx["java.lang:type=MemoryPool,name=Metaspace",Usage.max]
+
+内存池Code Cache监控
+名称：Code Cache已提交空间
+键值：jmx["java.lang:type=MemoryPool,name=Code Cache",Usage.committed]
+名称：Code Cache最大空间
+键值：jmx["java.lang:type=MemoryPool,name=Code Cache",Usage.max]
+名称：Code Cache使用空间
+jmx["java.lang:type=MemoryPool,name=Code Cache",Usage.used]
+
+内存池compressed class space监控：
+名称：compressed class space已提交空间
+键值：jmx["java.lang:type=MemoryPool,name=Compressed Class Space",Usage.committed]
+名称：compressed class space最大空间
+键值：jmx["java.lang:type=MemoryPool,name=Compressed Class Space",Usage.max]
+名称：compressed class space使用空间
+键值：jmx["java.lang:type=MemoryPool,name=Compressed Class Space",Usage.used]
+
+类加载监控：
+名称：类加载总数
+键值：jmx["java.lang:type=ClassLoading","TotalLoadedClassCount"]
+名称：类已加载值
+键值：jmx["java.lang:type=ClassLoading","LoadedClassCount"]
+名称：类已卸载值
+键值：jmx["java.lang:type=ClassLoading","UnloadedClassCount"]
+
+Tomcat线程监控
+名称：总开启线程数
+键值：jmx["java.lang:type=Threading","TotalStartedThreadCount"]
+名称：活动线程数
+键值：jmx["java.lang:type=Threading","ThreadCount"]
+名称：线程峰值数
+键值：jmx["java.lang:type=Threading","PeakThreadCount"]
+
+Tomcat线程键值监控：
+名称：最大线程数
+键值：jmx["Catalina:type=ThreadPool,name=\"http-nio-8080\"",maxThreads]
+名称：当前线程数
+键值：jmx["Catalina:type=ThreadPool,name=\"http-nio-8080\"",currentThreadCount]
+名称：繁忙线程数
+键值：jmx["Catalina:type=ThreadPool,name=\"http-nio-8080\"",currentThreadsBusy]
+
+Tomcat接收发送流量监控：        
+名称：接收的流量
+键值：jmx["Catalina:type=GlobalRequestProcessor,name=\"http-nio-8080\"",bytesReceived]
+名称：发送的流量
+键值：jmx["Catalina:type=GlobalRequestProcessor,name=\"http-nio-8080\"",bytesSent]
+单位B
+
+Tomcat请求和出错请求监控：
+名称：请求数
+键值：jmx["Catalina:type=GlobalRequestProcessor,name=\"http-nio-8080\"",requestCount]
+名称：出错请求
+键值： jmx["Catalina:type=GlobalRequestProcessor,name=\"http-nio-8080\"",errorCount]
+
+
+
+UserParameter=java.HeapMemoryUsage.status
+,/usr/local/jdk7/bin/java -jar /usr/local/zabbix/etc/cmdline-jmxclient-0.10.3.jar - 127.0.0.1:$1 java.lang:type=Memory HeapMemoryUsage 2>&1 |grep $2 |awk '{print $NF}'
+UserParameter=java.NobHeapMemoryUsage.status
+,/usr/local/jdk7/bin/java -jar /usr/local/zabbix/etc/cmdline-jmxclient-0.10.3.jar - 127.0.0.1:$1 java.lang:type=Memory NonHeapMemoryUsage 2>&1 |grep $2 |awk '{print $NF}'
+UserParameter=java.LoadClass.status
+,/usr/local/jdk7/bin/java -jar /usr/local/zabbix/etc/cmdline-jmxclient-0.10.3.jar - 127.0.0.1:$1 java.lang:type=ClassLoading $2 2>&1 |awk '{print $NF}'
+UserParameter=java.Thread.status
+,/usr/local/jdk7/bin/java -jar /usr/local/zabbix/etc/cmdline-jmxclient-0.10.3.jar - 127.0.0.1:$1 java.lang:type=Threading $2 2>&1 |awk '{print $NF}'
+#说明$1是要监控客户端的端口号，$2是要监控的内容
+
+
+调试过程笔记，可忽略：
+正确过滤：
+java -jar cmdline-jmxclient-0.10.3.jar - 127.0.0.1:12345 | grep 'Catalina:' | grep 'type=GlobalRequestProcessor' | grep 'name=' 
+正确的参数
+Catalina:name="http-nio-8080",type=GlobalRequestProcessor
+正确：
+java -jar cmdline-jmxclient-0.10.3.jar - 127.0.0.1:12345 'Catalina:name="http-nio-8080",type=GlobalRequestProcessor' bytesReceived
+则说明zabbix服务可以调用监控项jmx[Catalina:name="http-nio-8080",type=GlobalRequestProcessor'，bytesReceived]了
+
+可以根据以上的原理来修改自己模板的监控项
