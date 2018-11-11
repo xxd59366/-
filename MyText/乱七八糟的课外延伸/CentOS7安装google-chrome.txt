@@ -1,0 +1,8 @@
+CentOS7安装google-chrome
+
+1.下载rpm包
+2.搭建额外yum源，将下载的包配置为yum自动解决依赖问题
+3.google-chrome在CentOS7下以root运行时会遇到权限问题，需要加入选项--no-sandbox
+4.桌面图标文件位置：/usr/share/applications/google-chrome.desktop
+5.将图标复制到桌面添加 --no-sandbox选项，实现桌面启动
+6.设置别名，google-chorme='google-chorme --no-sandbox'，实现命令行启动

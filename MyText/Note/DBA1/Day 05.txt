@@ -72,6 +72,7 @@ Day 05 数据备份，数据恢复
             .. ..
             log_bin                                                     //启用binlog日志
             server_id=100                                         //指定id值
+            binlog_format="mixed"
             
             # systemctl restart mysqld
         · binlog相关文件
@@ -95,6 +96,7 @@ Day 05 数据备份，数据恢复
         3）分析binlog日志
     · 查看日志当前记录格式
     > show variables like "binlog_format";
+    > set binlog_format="mixed";
     · 修改日志记录格式
     # vim /etc/my.cnf
     [mysqld]
@@ -104,7 +106,7 @@ Day 05 数据备份，数据恢复
     # systemctl restart mysqld
     · 使用mysqlbinlog工具
         - 格式：mysqlbinlog [选项] binlog 日志文件名
-    · 常用选项
+    · 常用选项  偏移量 - position  日期 - datetime
         - --start-datetime="yyyy-mm-dd hh:mm:ss"
         - --stop-datetime="yyyy-mm-dd hh:mm:ss"
         - --start-position=数字
