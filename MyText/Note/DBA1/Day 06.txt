@@ -16,6 +16,7 @@ Day 06 插件工具使用
         - 由专业组织Percona提供（改进MySQL分支）
     · 主要含两个组件
         - xtrabackup : C程序，支持InnoDB/XtraDB
+        （因此，使用前先检查默认引擎是否正确，若为myisam则无效）
         - innobackupex : 以Perl脚本封装xtrabackup，还支持MyISAM
         
 2.安装percona
@@ -108,5 +109,74 @@ Day 06 插件工具使用
         > alter table gamedb.a import tablespace;                                                                 //导入表空间
         > select * from gamedb.a;
         
+============================================
+
+复习串讲
+
+备份方式：物理     逻辑
+备份策略：完全     差异      增量
         
-        
+数据增量备份、恢复
+启用MySQL服务的binlog实现对数据的实时增量备份
+启用日志    ROW STATEMENT MIXED
+自定义日志文件存储目录和文件名
+查看日志内容：
+mysqlbinlog  文件名
+记录sql命令的方式：时间点  偏移量
+mysqlbinlog [选项] 文件名
+--start-datatime="yyyy-mm-dd hh:mm:ss"
+--stop-datatime="yyyy-mm-dd hh:mm:ss"
+--start-position=数值     --stop-position=数值
+执行日志文件里记录的sql命令恢复数据
+# mysqlbinlog [选项] 文件名 | mysql -uroot -p123456
+
+手动创建新的日志文件方法？
+mysql> flush logs;
+# mysql -uroot -p123456 -e "flush logs"
+# mysqldump -uroot -p123456 --flush-logs 库名 > xxx.sql
+# systemctl restart mysqld
+mysql> show master status;
+
+删除日志文件
+mysql> reset mastser;
+mysql> purge master log to "日志名";
+# rm -rf 日志文件
+
+2 安装第三方软件percona，提供innobackupex命令做增量备份/恢复
+
+2.1 安装提供命令的软件包
+# yum -y install perl-Digest-MD5 per-DBD-mysql
+# rpm -ivh libev-4.15-1.el6.rf.x86_64.rpm
+# rpm -ivh percona-xtrabackup-24-2.4.7-1.el7.x86_64.rpm
+
+完全恢复（要求数据库目录为空）
+重做日志 --apply-log
+恢复数据 --copy-back
+
+重启数据库服务
+
+在innobackupex完全备份数据中，恢复某个表的数据
+--export 导出表信息
+删除表空间：
+> alter table 库.表 discard tablespace;
+导入表空间
+> alter table 库.表 import tablespace;
+
+恢复步骤：
+从备份数据里导出表信息
+# innobackupex --user root --password 654321 \
+--databases="buydb" --apply-log --export /buydbfull
+创建删除的表（表结构和删除的时候相同）
+> create table buydb.b(name char(10));
+删除表空间
+> alter table buydb.b discard tablespace;
+把导出的表信息文件拷贝到数据库目录下
+# cp /buydbfull/buydb/b.{cfg,ibd,exp} /var/lib/mysql/buydb/
+# chown mysql:mysql /var/lib/mysql/buydb/b.*
+导入表空间
+> alter table buydb.b import tablespace;
+查看数据
+
+b.frm  b.ibd
+
+表空间文件   文件    

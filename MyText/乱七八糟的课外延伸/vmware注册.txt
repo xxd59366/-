@@ -1,6 +1,9 @@
 ﻿一、安装VMWare出现问题
 症状一：
 安装时出现问题： runtime DLL出错
+dll文件缺失：Microsoft vc++  运行组件
+每一个版本都得装
+
 解决方法：
 在运行报错情况下，
 win+r打开运行，输入全局变量%temp%
@@ -37,3 +40,5 @@ HKEY_LOCAL_MACHINE \ SOFTWARE \ Policies \ Microsoft \ Windows Defender
 2.右键“命令提示符”，选择“更多”，选择“以管理员身份运行”。
 3.输入
 REG add "HKLM\SYSTEM\CurrentControlSet\Services\WaaSMedicSvc" /v "Start" /t REG_DWORD /d "4" /f
+
+正在加载虚拟网络...
