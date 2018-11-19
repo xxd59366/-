@@ -47,6 +47,7 @@ sleep 1
 cd $basedir
 cd ../..
 echo 切换到`pwd -P`
+git pull
 git add -A .
 git config --global user.email "593664243@qq.com"
 git commit
