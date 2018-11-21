@@ -1,6 +1,10 @@
 #/bin/bash
 ######################################
+# mys
+location=`ls -l $(dirname $0) | grep Gitcomm | awk '{print $NF}'`
+basedir=`dirname $location`
 
+######################################
 #init
 init() {
 echo 正在执行初始化操作...
@@ -41,8 +45,6 @@ fi
 #commit
 commit() {
 
-location=`ls -l $(dirname $0) | grep Gitcomm | awk '{print $NF}'`
-basedir=`dirname $location`
 sleep 1
 cd $basedir
 cd ../..
@@ -63,12 +65,26 @@ git push
 }
 
 ############################################################
+#pull
+pull() {
+echo '下拉中……'
+sleep 1
+cd $basedir
+cd ../..
+echo 切换到`pwd -P`
+git pull
+}
+
+###########################################################
 case $1 in
 init)
 init
 ;;
 commit)
 commit
+;;
+pull)
+pull
 ;;
 *)
 echo 请输入选项
