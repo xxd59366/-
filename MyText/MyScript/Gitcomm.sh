@@ -1,43 +1,56 @@
 #/bin/bash
 ######################################
 # mys
-location=`ls -l $(dirname $0) | grep Gitcomm | awk '{print $NF}'`
-basedir=`dirname $location`
+basedir=`dirname $0`
 
 ######################################
 #init
+
 init() {
 echo 正在执行初始化操作...
 sleep 2
 a=$0
 check01=0
 check02=0
+info=0
 if [ $a == './Gitcomm.sh' ];then
-	a=$(pwd -P)
-	chmod +x "$a/Gitcomm.sh"
+#	a=$(pwd -P)
+#	chmod +x "$a/Gitcomm.sh"
+#	check01=$?
+#	rm -rf /usr/local/bin/Gitcomm
+#	ln -s "$a/Gitcomm.sh" /usr/local/bin/Gitcomm
+#	check02=$?
+	sed -i '/PATH/d' /root/.bashrc
 	check01=$?
-	rm -rf /usr/local/bin/Gitcomm
-	ln -s "$a/Gitcomm.sh" /usr/local/bin/Gitcomm
+	echo 'export PATH=/root/StudyNote/MyText/MyScript:$PATH' >> /root/.bashrc
 	check02=$?
-elif [ $a == '/usr/local/bin/Gitcomm' ];then
-	location=`ls -l $(dirname $0) | grep Gitcomm | awk '{print $NF}'`
-	rm -rf /usr/local/bin/Gitcomm
-	chmod +x $location
-        check01=$?
-        ln -s $location /usr/local/bin/Gitcomm
-        check02=$?
 else
+#elif [ $a == '/usr/local/bin/Gitcomm' ];then
+#	location=`ls -l $(dirname $0) | grep Gitcomm | awk '{print $NF}'`
+#	rm -rf /usr/local/bin/Gitcomm
+#	chmod +x $location
+#        check01=$?
+#        ln -s $location /usr/local/bin/Gitcomm
+#        check02=$?
 	echo '请切换至脚本目录，使用./Gitcomm.sh init初始化'
 	exit 1
 	break
 fi
+
+if [ "$check01" -ne 0 ];then
+	info='清理文件失败'
+elif [ "$check02" -ne 0 ];then
+	info='写入失败'
+fi
+
 if [[ "$check01" -eq 0 && "$check02" -eq 0 ]];then
 	echo '初始化成功，可使用"Gitcomm"命令同步'
 	exit 0
 else
-	echo 初始化失败
+	echo 初始化失败,$info
 	exit 1
 fi
+
 }
 
 ########################################################
@@ -69,7 +82,7 @@ git push
 pull() {
 echo '下拉中……'
 sleep 1
-cd $basedir
+cd `dirname $0`
 cd ../..
 echo 切换到`pwd -P`
 git pull
