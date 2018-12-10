@@ -59,7 +59,7 @@ fi
 commit() {
 
 sleep 1
-cd $basedir
+cd `dirname $0`
 cd ../..
 echo 切换到`pwd -P`
 git pull
