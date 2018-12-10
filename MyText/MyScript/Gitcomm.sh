@@ -100,7 +100,7 @@ pull)
 pull
 ;;
 *)
-echo 请输入选项
+echo 'error99：请输入选项'
 exit 99
 ;;
 esac
