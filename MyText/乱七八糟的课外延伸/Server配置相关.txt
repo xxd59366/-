@@ -1,0 +1,17 @@
+一、个人用脚本
+  1.存放在单个目录下
+  2.初始化环境时直接在配置中写入PATH变量即可
+  basedir=`dirname $0`
+  echo "export PATH=$basedir:$PATH"
+二、github免验证同步问题
+  1.配置文件中写入账号
+  # git config --globle user.email 593664243@qq.com
+  ~/.gitconfig
+  2.启用记住账号密码功能
+  # git config --global credential.helper store
+  # git push
+三、NTP时间同步问题
+  1.时区差异导致时差，需要同步时区
+  # ln -sf /usr/share/zoneinfo/posix/Asia/Shanghai /etc/localtime
+  
+  
