@@ -46,11 +46,180 @@ iscsi:
 
 客户端client
 1.客户端安装软件并启动服务
-# yum install iscsi-initiator-utils -y
+  # yum install iscsi-initiator-utils -y
 2.设置本机的iqn名称
-# vim /etc/iscsi/initiatorname.iscsi
+  # vim /etc/iscsi/initiatorname.iscsi
 InitiatorName=iqn.2018-01.cn.tedu:client1
 3.发现远程target存储
-# iscsiadm --mode discoverydb --type sendtargets --portal 192.168.4.5 --discover
-# systemctl restart iscsi
+  # iscsiadm --mode discoverydb --type sendtargets --portal 192.168.4.5 --discover
+  # systemctl restart iscsi
+4.查看iscsi的加载是否成功
+  # lsblk
+  出现sda盘
+5.对sda盘进行分区和格式化,并挂载进行使用
+  # parted /dev/sda mklabel gpt
+  # parted /dev/sda mkpart 1 100%
+  # lsblk
+  /** sda1出现 **/
+  # mkfs.xfs /dev/sda1
+  # mount /dev/sda1 /mnt
+三.附加课外实验：多台FTP或者http主机使用共享存储
+
+这里以FTP为例，web1和web2主机都安装vsftpd软件，使用统一的后端共享存储设备
+
+web1(ftp) /var/ftp
+iscsi -- sda
+mount /sda1 /var/ftp
+
+web2(http)
+iscsi -- sda
+mount /dev/sda1 /var/www/html
+
+iscsi块共享:
+  不能同时多人使用
+
+修改vsftpd配置文件，开启匿名上传功能。将下面2行默认的注释行打开。
+#anon_upload_enable=YES
+#anon_mkdir_write_enable=YES
+
+四.部署multipath多路径环境
+1.通过multipath,实现以下目标
+  · 在共享存储服务器上配置ISCSI,为应用服务器共享存储空间
+  · 应用服务器上配置iSCSI，发现远程共享存储
+  · 应用服务器上配置Multipath，将相同的共享存储映射为同一个名称
+
+  web1(iscsi客户端)
+  eth0
+  eth1
+  双网卡访问
+  proxy(iscsi服务端)
+  
+  client上操作
+  # iscsiadm --mode discoverydb --type sendtargets --portal 192.168.4.5:3260 --discover
+  192.168.2.5:3260,1 iqn.2018-01.cn.tedu:server1
+  # iscsiadm --mode discoverydb --type sendtargets --portal 192.168.2.5:3260 --discover
+  192.168.2.5:3260,1 iqn.2018-01.cn.tedu:server1
+  # systemctl restart iscsi
+  # lsblk
+  sda             8:0    0   20G  0 disk 
+  └─sda1          8:1    0   20G  0 part 
+  sdb             8:16   0   20G  0 disk 
+  └─sdb1          8:17   0   20G  0 part
+
+2.使用多路径将两个硬盘合并为一个
+
+client操作:
+
+1) 安装多路径软件包
+  # yum install device-mapper-multipath -y
+2) 生成配置文件
+  # cd /usr/share/doc/device-mapper-multipath-0.4.9/
+  # cp multipath.conf /etc/
+3) 查看两块硬盘的id号
+  # /usr/lib/udev/scsi_id --whitelisted --device=/dev/sda
+  3600140541fc17254192472bae0438e5e
+  # /usr/lib/udev/scsi_id --whitelisted --device=/dev/sdb
+  3600140541fc17254192472bae0438e5e
+4) 修改配置文件
+  # vim /etc/multipath.conf 
+  跳转至60行
+  multipaths {
+          multipath {
+                  wwid                    3600140541fc17254192472bae0438e5e
+                  alias                   my_scsi
+          }
+  }
+5) 查看多路径设备是否正常
+  # multipath -ll
+  # multipath -rr
+  my_scsi (3600140541fc17254192472bae0438e5e) dm-2 LIO-ORG ,store           
+  size=20G features='0' hwhandler='0' wp=rw
+  |-+- policy='service-time 0' prio=1 status=active
+  | `- 2:0:0:0 sda 8:0  active ready running
+  `-+- policy='service-time 0' prio=1 status=enabled
+    `- 3:0:0:0 sdb 8:16 active ready running
+  
+  关闭proxy的eth1网卡
+  proxy ~]# ifdown eth1
+  # multipath -ll
+  my_scsi (3600140541fc17254192472bae0438e5e) dm-2 LIO-ORG ,store           
+  size=20G features='0' hwhandler='0' wp=rw
+  |-+- policy='service-time 0' prio=1 status=active
+  | `- 2:0:0:0 sda 8:0  active ready running
+  `-+- policy='service-time 0' prio=1 status=enabled
+    `- 3:0:0:0 sdb 8:16 failed ready running
+
+  挂载特殊硬盘my_scsi
+  # mount /dev/mapper/my_scsi1 /mnt 
+
+6) 为了防止和ceph存储冲突,需要取消当前实验
+  1.umount
+    # umount /mnt
+  2.stop multipath.service
+    # systemctl stop multipathd.service
+  3.logout
+    # iscsiadm --mode node --targetname iqn.2018-01.cn.tedu:server1 --portal 192.168.4.5:3260 --logout
+    # iscsiadm --mode node --targetname iqn.2018-01.cn.tedu:server1 --portal 192.168.2.5:3260 --logout
+
+五.配置并访问NFS共享
+1.服务器利用NFS机制发布2个共享目录，要求如下：
+  · 将目录/root共享给192.168.2.100，客户机的root用户有权限写入
+  · 将/usr/src目录共享给192.168.2.0/24网段，只开放读取权限
+2.配置proxy的nfs文件
+  # vim /etc/exports
+  /root 192.168.2.100(rw,no_root_squash)
+  /usr/src 192.168.2.0/24(ro)
+  /**
+  * 用root访问nfs时,默认会被降级,需要在选项中增加no_root_squash
+  **/
+3.客户端查看
+  # showmount -e 192.168.2.5
+  /usr/src 192.168.2.0/24
+  /root    192.168.2.100
+4.NFS依赖服务
+  # systemctl restart rpcbind;systemctl enabled rpcbind
+  NFS:随机端口 如1098
+  rpcbind:111端口
+  注册端口:
+    nfs:1098
+
+六.编写udev规则
+1.编写udev规则，实现以下目标：
+  · 当插入一个U盘时，该U盘自动出现一个链接称为udisk
+  · U盘上的第1个分区名称为udisk1，以此类推
+  · 终端上出现提示信息”udisk plugged in”
+2.udev(2.6) 3.10
+  udev设备管理
+  所有设备都存放在/dev/目录(静态)
+  udev动态管理
+  udev动态设备管理/sys /dev
+  对于Linux kernel 2.6及更新的操作系统版本会将设备的相关信息动态写入/sys文件系统中，而udev程序可以通过读取这些设备系信息，并根据自己的udev规则进行设备管理器，实现如下功能:
+  · 处理设备命名 ENV{设备属性}=="属性值" NAME="定义设备名称" 
+  · 决定要创建哪些设备文件或链接 SYMLINK+="链接"
+  · 决定如何设置属性 MODE="权限"  OWNER="属主"  GROUP="属组"
+  · 决定触发哪些事件 RUN="命令"
+  /**
+  * ==判断 !=
+  * =赋值
+  * +=原有基础上的赋值
+  * RUN+=
+  * :=不允许被替换的规则
+  * 判断条件1,判断条件2,判断条件3
+  * ENV{品牌}==xx,ENV{序列号}==xx,ENV{条件}==值,RUN+=
+  * KERNEL=="sd[a-z]1" 判断设备的内核名称
+  **/
+
+
+  udev默认规则存放在/etc/udev/rules.d目录下，通过修改此目录下的规则实现设备的命名、属性、链接文件等。 
+
+1）查看设备属性
+加载USB设备的同时实时查看设备的相关属性，可以使用monitor指令。
+  # udevadm monitor --property 
+  ACTION=add
+  如果设备已经加载则无法使用monitor查看相关属性。可以使用下面的命令查看设备属性。 
+  # udevadm info --query=path –name=/dev/sdb
+  # udevadm info --query=property –path=/block/sdb
+  # vim  /etc/udev/rules.d/70-usb.rules
+  ENV{ID_VENDOR}=="JMicron",ACTION=="add",RUN+="/usr/bin/systemctl start httpd"
+  ENV{ID_VENDOR}=="JMicron",ACTION=="remove",RUN+="/usr/bin/systemctl stop httpd"
 
