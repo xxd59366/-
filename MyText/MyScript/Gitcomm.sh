@@ -22,7 +22,7 @@ if [ $a == './Gitcomm.sh' ];then
 #	check02=$?
 	sed -i '/PATH/d' /root/.bashrc
 	check01=$?
-	echo 'export PATH=/root/StudyNote/MyText/MyScript:$PATH' >> /root/.bashrc
+	echo "export PATH=`pwd -P`:$PATH" >> /root/.bashrc
 	check02=$?
 else
 #elif [ $a == '/usr/local/bin/Gitcomm' ];then
@@ -44,7 +44,7 @@ elif [ "$check02" -ne 0 ];then
 fi
 
 if [[ "$check01" -eq 0 && "$check02" -eq 0 ]];then
-	echo '初始化成功，可使用"Gitcomm"命令同步'
+	echo '初始化成功，重启终端后可使用"Gitcomm"命令同步'
 	exit 0
 else
 	echo 初始化失败,$info
@@ -87,6 +87,10 @@ cd ../..
 echo 切换到`pwd -P`
 git pull
 }
+###########################################################
+printout(){
+echo `pwd -P`
+}
 
 ###########################################################
 case $1 in
@@ -98,6 +102,9 @@ commit
 ;;
 pull)
 pull
+;;
+echo)
+printout
 ;;
 *)
 echo 'error99：请输入选项'

@@ -1,0 +1,56 @@
+Day 01 存储技术与应用 iSCSI技术应用 、 udev配置 NFS网络文件系统 、 Multipath多路径 、 NFS网络文件系统 、 udev配置
+
+一.关于硬盘的二三事
+  DAS(直连) 硬盘接口 IDE,SATA,SAS,SSD
+  
+  传统网络存储:
+  NAS:文件系统存储(ext3,ext3,ntfs) samba,nfs
+  SAN:块共享 iscsi DELL(EMC(vmware))
+  FC:光纤 做网盘(SAN)时所有设备通过光纤 网卡,交换机,路由器
+  
+  分布式存储ceph
+  
+  阿里(去IOE)  IBM Oracle EMC
+源码 --> 二次开发 --> nginx ==> tengine
+二.准备两台虚拟机
+  在proxy上执行
+  [root@proxy ~]# parted /dev/vdb mklabel gpt
+  信息: You may need to update /etc/fstab.
+  
+  [root@proxy ~]# parted /dev/vdb mkpart primary 1 100%
+  信息: You may need to update /etc/fstab.
+  
+  # targetcli
+  /> backstores/block create store /dev/vdb1
+  /> ls
+  /> /iscsi create iqn.2018-01.cn.tedu:server1
+  /> /iscsi/iqn.2018-01.cn.tedu:server1/tpg1/acls create iqn.2018-01.cn.tedu:client1
+  /> /iscsi/iqn.2018-01.cn.tedu:server1/tpg1/luns create /backstores/block/store
+  /> saveconfig 
+  /> exit
+
+backstore:
+ 1.store /dev/vbd1 20G
+ 2.db /dev/vdc 80G
+ 3.www 
+iscsi:
+ iqn-2018
+ acl 字串(iqn)
+ lun store
+ iqn.2019
+ acl
+ lun db
+ iqn-2020
+ acl
+ lun
+
+客户端client
+1.客户端安装软件并启动服务
+# yum install iscsi-initiator-utils -y
+2.设置本机的iqn名称
+# vim /etc/iscsi/initiatorname.iscsi
+InitiatorName=iqn.2018-01.cn.tedu:client1
+3.发现远程target存储
+# iscsiadm --mode discoverydb --type sendtargets --portal 192.168.4.5 --discover
+# systemctl restart iscsi
+
