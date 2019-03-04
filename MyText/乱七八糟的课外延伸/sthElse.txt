@@ -1,5 +1,6 @@
-1. uname -a     用于查看系统内核名称、版本、节点名、硬件名、硬件平台、处理器类型
-、操作系统等信息
+1. uname -a     用于查看系统内核名称、版本、节点名、硬件名、硬件平台、处理器类型、操作系统等信息
+uname -r
+查看内核版本信息
 2. uptime       查看系统负载情况
 3. free [-m/-g]
 	free -m  以m为单位显示当前系统中内存的使用量情况   
@@ -14,9 +15,9 @@ mount -o remount,rw /sysroot
 chroot /sysroot
 
 echo "Taren1"|passwd --stdin root
-【或passwd
+[或passwd
 Taren1
-Taren1】
+Taren1]
 
 touch /.autorelabel
 exit
@@ -33,7 +34,7 @@ reboot
  	-t d		十进制
  	-t x		十六进制
  	-t f		浮点数
-9. tr命令用于转换文本文件中的字符，格式为：'tr [原始字符] [目标字符]'
+· tr命令用于转换文本文件中的字符，格式为：'tr [原始字符] [目标字符]'
     	如 'tr *.txt [a-z] [A-Z]'将*文本文件的内容中小写转换成大写
 10. wc命令用于统计指定文本的行数、字数、字节数，格式为'wc [参数] 文本'
   参数		作用

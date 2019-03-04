@@ -1,0 +1,9 @@
+修改Linux网卡名称为eth0
+1.将/etc/sysconfig/network-scripts/相关配置修改为ifcfg-eth0
+其内的DEVICE和NAME改为eth0
+2.修改/etc/default/grub文件
+在GRUB_CMDLINE_LINUX字段后加上
+net.ifnames=0 biosdevname=0
+3.重新生成GRUB配置并更新内核参数
+# grub2-mkconfig -o /boot/grub2/grub.cfg
+4.重启并验证
