@@ -1,0 +1,284 @@
+Day02 集群及LVS简介 LVS-NAT集群 LVS-DR集群
+
+一.集群及LVS简介
+  1.集群简介
+    1) 什么是集群
+    · 高速网互联
+    · 多服务器集中起来提供一种服务,在客户端看来就像是只有一个服务器
+    · 节省成本,低成本下获得在性能,可靠性和灵活性方面的相对较高的收益
+    · 任务调度时集群系统中的核心技术
+    2) 集群目的
+    · 提高性能
+    · 降低成本
+    · 提高扩展性
+    · 增强可靠性
+    3) 集群分类
+    · 高性能计算集群HPC
+      - 通过以集群开发的并行应用程序,解决复杂的科学问题
+    · 负载均衡(LB)集群
+      - 客户端负载在计算机集群中尽可能平均分摊
+    · 高可用(HA)集群
+      - 避免单点故障,当一个系统发生故障时,可以快速迁移
+  2.LVS概述
+    1) LVS项目介绍
+    · Linux虚拟服务器(LVS)是章文嵩在国防科大就读博士期间创建的
+    · LVs可以实现高可用的,可伸缩的Web,Mail,Cache和Media等网络服务
+    · 最终目标时利用Linux操作系统和LVS集群软件实现一个高可用,高性能,低成本的服务器应用集群
+	/**
+	* LVS:性能高,功能少,不支持正则
+	* nginx:性能中,功能多,正则
+	**/
+    2) LVS集群组成
+    · 前端:负载均衡层
+      - 由一台或多台负载调度器构成
+    · 中间:服务器群组层
+      - 由一组实际运行应用服务的服务器组成
+    · 底端:数据共享存储层
+      - 提供共享存储空间的存储区域
+      /**
+      * 用keeplived来保证LVS的高可用
+      **/
+    3) LVS术语
+    · Director Server:调度服务器
+      - 将负载分发到Real Server的服务器
+    · Real Server:真实服务器
+      - 真正提供应用服务的服务器
+    · VIP[virtual IP]:虚拟IP地址
+      - Director Server公布给用户访问的虚拟IP地址
+    · RIP[real IP]:真实IP地址
+      - 集群节点[Real Server]上使用的IP地址
+    · DIP:调度器连接节点服务器的IP地址
+    · CIP[Client IP]:客户端IP
+    4) LVS工作模式
+    · NAT模式
+      - 通过网络地址转换实现的虚拟服务器;
+      - 用户通过互联网访问VIP,LVS可以看作一个路由器;
+      - 要求从哪里进,从哪里出;
+      - 与路由器的区别:路由器只是单纯把内网服务器发布到公网,而LVS可以实现负载均衡;
+      - 缺点:LVS的负荷高,调度器性能会成为整个集群的瓶颈;
+      - 适合数据量小的集群环境;
+    · TUN[隧道]模式
+      - 用户访问北京的Director Server;
+      - Real Server在上海;
+      - 通过LVS转发请求寻找Real Server服务;
+    · DR模式
+      - 直接使用路由技术实现虚拟服务器;
+      - 路由器将数据转给LVS,LVS转给服务器;
+      - 服务器将处理结果通过路由器传输给用户;
+      - 适合数据量较大的集群环境;
+      - 节点服务器需要配置VIP,注意MAC地址广播;
+    5) 负载均衡调度算法
+    · LVS目前实现了10种调度算法
+    · 常用调度算法有4种
+      - 轮询(Round Robin)
+        * 将客户端请求平均分发到Real Server
+      - 加权轮询(Weight Round Robin)
+        * 根据Real Server权重值进行轮询调度
+      - 最少连接(Least Connections)
+        * 选择连接数最少的服务器
+      - 加权最少连接(Weight Least Connections)
+        * 根据Real Server权重值,选择连接数最少的服务器
+      - 源地址散列(Source Hashing)
+        * 根据请求的目标IP地址,作为散列键(Hash Key)从静态分配的散列表找出对应的服务器
+      - 其他调度算法
+        * 给予局部性的最少链接
+	* 带复制的基于局部性最少链接
+	* 目标地址的三列(Destination Hashing)
+	* 最短的期望的延迟
+	* 最少队列调度
+
+二.LVS-NAT集群
+  1.软件安装
+    1) 安装前准备
+    · LVS的IP负载均衡技术是通过IPVS模块实现的
+    · IPVS模块已成为Linux组成部分
+    2) 安装ipvsadm
+    3) ipvsadm用法
+    	ipvsadm -A 添加虚拟服务器
+    	ipvsadm -E 修改虚拟服务器
+    	ipvsadm -D 删除虚拟服务器
+    	ipvsadm -C 清空所有
+    	ipvsadm -a 添加真实服务器
+	ipvsadm -e 修改真实服务器
+    	ipvsadm -d 删除真实服务器
+    	ipvsadm -L 查看
+    	-s [rr|wrr|lc|wlc] 指定负载调度算法
+
+    · 创建虚拟服务器
+      # ipvsadm -A -t|u 192.168.4.5:80 -s [算法]
+      -A 添加虚拟服务器
+      -t 协议为tcp
+      -u 协议为udp
+      -s 执行负载调度算法
+    · 添加/删除服务器节点
+      # ipvsadm -a -t|u 192.168.4.5:80 -r 192.168.2.100 [-g|i|m] [-w 权重]
+      -a 添加真实服务器
+      -d 删除真实服务器
+      -r 指定真实服务器的地址
+      -m 使用NAT模式
+      -g 使用DR模式  /* 默认模式 */
+      -i 使用TUN模式
+      -w 为节点服务器设置权重,,默认为1
+    · 查看IPVS
+      # ipvsadm -Ln
+    · 永久保存所有规则
+      # ipvsadm-save -n > /etc/sysconfig/ipvsadm
+      # cat /etc/sysconfig/ipvsadm
+    · 清除无关规则
+      # ipvsadm -C
+      # rm -f /etc/sysconfig/ipvsadm
+
+    Example:
+    /** ipvsadm选项用法
+    * -A添加集群
+    * -a添加服务器
+    **/
+
+    # ipvsadm -A -t 192.168.4.5:80 -s rr
+    # ipvsadm -Ln
+    IP Virtual Server version 1.2.1 (size=4096)
+    Prot LocalAddress:Port Scheduler Flags
+      -> RemoteAddress:Port           Forward Weight ActiveConn InActConn
+    TCP  192.168.4.5:80 rr
+    # ipvsadm -a -t 192.168.4.5:80 -r 192.168.2.100:80
+    # ipvsadm -Ln
+    IP Virtual Server version 1.2.1 (size=4096)
+    Prot LocalAddress:Port Scheduler Flags
+      -> RemoteAddress:Port           Forward Weight ActiveConn InActConn
+    TCP  192.168.4.5:80 rr
+      -> 192.168.2.100:80             Route   1      0          0     
+  2.LVS-NAT案例
+  · 使用LVS实现NAT模式的集群调度服务器，为用户提供Web服务：
+    * 集群对外公网IP地址为192.168.4.5
+    * 调度器内网IP地址为192.168.2.5
+    * 真实Web服务器地址分别为192.168.2.100、192.168.2.200
+    * 使用加权轮询调度算法，真实服务器权重分别为1和2
+  · 机器配备:
+    * client 192.168.4.10/24
+    * proxy 192.168.4.5/24 192.168.2.5/24
+    * web1 192.168.2.100/24
+    * web2 192.168.2.200/24
+    /** 注意: web1 和 web2 的eth0网卡需要关闭 **/
+  
+* 服务器节点配置(web1/2):
+  1) 设置Web服务器
+  2) 启动Web服务
+  3) 关闭防火墙与SELinux
+  # systmctl stop firewalld
+  # setenforce 0
+
+* 调度服务器配置(proxy)
+  1) 确认调度器的路由转发功能
+  # echo 1 > /proc/sys/net/ipv4/ip_forward
+  # cat /proc/sys/net/ipv4/ip_forward
+  1
+  /** 上面为临时配置 **/
+  # echo "net.ipv4.ip_forward = 1" >> /etc/sysctl.conf
+  /** 这个是永久配置,可以用sysctl -p命令查看规则 **/
+  2) 创建集群服务器
+  # yum -y install ipvsadm
+  # ipvsadm -A -t 192.168.4.5:80 -s wrr
+  3) 添加真实服务器
+  # ipvsadm -a -t 192.168.4.5:80 -r 192.168.2.100:80 -w 1 -m
+  # ipvsadm -a -t 192.168.4.5:80 -r 192.168.2.200:80 -w 1 -m
+  4) 查看规则列表,并保存规则
+  # ipvsadm-save -n > /etc/sysconfig/ipvsadm
+
+* 客户端测试(client)
+  1) 利用自带的curl浏览器反复访问Dicretor Server(proxy)
+  # curl http://192.168.4.5
+
+三.部署LVS-DR集群
+  1.问题描述
+  · 使用LVS实现DR模式的集群调度服务器，为用户提供Web服务：
+    * 客户端IP地址为192.168.4.10
+    * LVS调度器VIP地址为192.168.4.15
+    * LVS调度器DIP地址设置为192.168.4.5
+    * 真实Web服务器地址分别为192.168.4.100、192.168.4.200
+    * 使用加权轮询调度算法，web1的权重为1，web2的权重为2
+    * 说明：
+    * CIP是客户端的IP地址；
+    * VIP是对客户端提供服务的IP地址；
+    * RIP是后端服务器的真实IP地址；
+  2.方案
+  · 使用4台虚拟机,1台作为Director调度器,2台作为Real Server
+    * client eth0(192.168.4.10/24)
+    * proxy eth0(192.168.4.5/24) eth0:0(192.168.4.15/24)
+    * web1 eth0(192.168.4.100/24) lo:0(192.168.4.15/32)
+    * web2 eth0(192.168.4.200/24) lo:0(192.168.4.15/32)
+    /** 
+    * 注意: 
+    * 1.web1/web2的子网掩码必须是32位 
+    * 2.VIP必须配在虚拟网卡上
+    **/
+  
+    * DIP是调度器与后端服务器通信的IP地址（VIP必须配置在虚拟接口）。
+  · proxy配置:
+    # cp ifcfg-eth0 ifcfg-eth0:0
+    # vim ifcfg-eth0:0
+      TYPE=Ethernet
+      BOOTPROTO=none
+      DEFROUTE=yes
+      NAME=eth0:0
+      DEVICE=eth0:0
+      ONBOOT=yes
+      IPADDR=192.168.4.15
+      PREFIX=24
+    # systemctl restart network
+  · web1配置:
+    # cp /etc/sysconfig/network-scripts/ifcfg-lo{,:0}
+    # vim /etc/sysconfig/network-scripts/ifcfg-lo:0
+      DEVICE=lo:0
+      IPADDR=192.168.4.15
+      NETMASK=255.255.255.255
+      NETWORK=192.168.4.15
+      BROADCAST=192.168.4.15
+      ONBOOT=yes
+      NAME=lo:0
+  · 防止地址冲突的问题：
+    * 这里因为web1也配置与代理一样的VIP地址，默认肯定会出现地址冲突；
+    * sysctl.conf文件写入这下面四行的主要目的就是访问192.168.4.15的数据包，只有调度器会响应，其他主机都不做任何响应，这样防止地址冲突的问题。
+    # vim /etc/sysctl.conf
+    * 手动写入如下4行内容
+      net.ipv4.conf.all.arp_ignore = 1
+      net.ipv4.conf.lo.arp_ignore = 1
+      net.ipv4.conf.lo.arp_announce = 2
+      net.ipv4.conf.all.arp_announce = 2
+    * 有arp广播问谁是192.168.4.15时，本机忽略该ARP广播，不做任何回应
+    * 本机不要向外宣告自己的lo回环地址是192.168.4.15
+    # sysctl -p
+    /** 重启网络服务，设置防火墙与SELinux **/
+
+  · proxy部署调度器:
+    # yum -y install ipvsadm
+    # ipvsadm -C
+    /** 1.清空规则 **/
+    # ipvsadm -A -t 192.168.4.15:80 -s wrr
+    /** 2.添加集群服务器 **/
+    # ipvsadm -a -t 192.168.4.15:80 -r 192.168.4.100 -g -w 1
+    # ipvsadm -a -t 192.168.4.15:80 -r 192.168.4.200 -g -w 2
+    /** 3.添加Real Server **/
+    # ipvsadm -Ln
+    # ipvsadm-save -n > /etc/sysconfig/ipvsadm
+    /** 4.查看规则并保存 **/
+  · 客户端测试
+    客户端使用curl命令反复连接http://192.168.4.15,查看访问的页面是否会轮询到不同的后端真实服务器;
+    扩展知识:默认LVS不带健康检查功能,需要自己手动编写动态检测脚本,实现该功能:(参考脚本如下,仅供参考)
+    # vim check.sh
+	#!/bin/bash
+	VIP=192.168.4.15:80
+	RIP1=192.168.4.100
+	RIP2=192.168.4.200
+	while :
+	do
+	   for IP in $RIP1 $RIP2
+	   do
+	           curl -s http://$IP &>/dev/null
+	if [ $? -eq 0 ];then
+	            ipvsadm -Ln | grep -q $IP || ipvsadm -a -t $VIP -r $IP
+	        else
+	             ipvsadm -Ln | grep -q $IP && ipvsadm -d -t $VIP -r $IP
+	        fi
+	   done
+	sleep 1
+	done

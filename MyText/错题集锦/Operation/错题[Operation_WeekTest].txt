@@ -1,0 +1,6 @@
+revision  修订版
+merge  合并
+allocation  分配
+content  内容
+visible  可见的
+

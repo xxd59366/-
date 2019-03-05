@@ -6080,6 +6080,7 @@ server {
 rewrite 			旧地址 新地址 [选项];
 last 					不再读其他rewrite
 break 					不再读其他语句，结束请求
+redirect
 
 
 //网络蜘蛛用(网络蜘蛛:百度,搜狗等)
@@ -6689,7 +6690,7 @@ cp /root/rpmbuild/SPECS/nginx.sh %{buildroot}/usr/local/nginx/
 
 %changelog
 
-2.rombuild创建RPM软件包
+2.ppmbuild创建RPM软件包
 # rpmbuild -ba /root/rpmbuild/SPECS/nginx.spec
 # ls /root/rpmbuild/RPMS/x86_64/nginx-1.12.2-10.x86_64.rpm
 # rpm -qpi RPMS/x86_64/nginx-1.12.2-10.x86_64.rpm
