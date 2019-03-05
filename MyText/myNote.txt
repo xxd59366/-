@@ -6394,6 +6394,13 @@ keystoreFile="/usr/local/tomcat/keystore" keystorePass="123456" clientAuth="fals
 
 
 二.Varnish
+* 代理服务器概念:
+  · proxy,代理人,经纪人,中介
+  · 歹徒用户处理事务
+    - 能提供正常情况下不便或无法访问的资源
+  · 应用场景:
+    - Web访问加速(正向/反向)
+    - IP伪装,"翻墙"
 1.使用Varnish加速Web
 · nginx [代理]
 · varnish [代理]+缓存
