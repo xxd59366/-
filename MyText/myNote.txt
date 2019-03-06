@@ -6329,8 +6329,8 @@ Day 05 Tomcat服务器 Tomcat应用案例 、 Varnish代理服务器
 · 验证
 # ss -antulp | grep java					//查看java监听的端口,正确的应该有3个端口
 8080
-8009
-8005
+8009 
+8005 用来关闭Tomcat的端口
 
 二.使用Tomcat部署虚拟主机
 1.修改server.xml配置文件，创建两个域名的虚拟主机，修改如下两个参数块：
