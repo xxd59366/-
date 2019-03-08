@@ -32,6 +32,12 @@ HKEY_LOCAL_MACHINE \ SOFTWARE \ Policies \ Microsoft \ Windows Defender
 右侧空白区域右键-新建-DWORD（32位）值，命名它为DisableAntiSpyware。
 修改数值为1，因0代表启用，1代表禁用。
 点确定关闭注册表。
+
+脚本走起：
+1.win键，找到windows系统。
+2.右键“命令提示符”，选择“更多”，选择“以管理员身份运行”。
+3.输入
+REG add "HKLM\SOFTWARE\Policies\Microsoft\Windows Defender" /v "DisableAntiSpyware" /t REG_DWORD /d "1" /f
 重启电脑Windows Defender已经不会在开机启动了。
 
 三、关闭windows update
