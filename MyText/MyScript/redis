@@ -1,0 +1,42 @@
+#!/bin/bash
+mhost=192.168.1.${HOSTNAME:5}
+mport=63${HOSTNAME:5}
+host=192.168.1.$1
+port=63$1
+
+up(){
+/etc/init.d/redis_6379 start
+}
+
+check(){
+  if [ $? -eq 0 ];then
+        echo "shutdown redis server..."
+  else
+        echo "error..." >&2
+        exit 2
+  fi
+}
+
+down(){
+redis-cli -h $mhost -p $mport $1 $2 shutdown
+check
+}
+
+connect(){
+redis-cli -h $host -p $port
+}
+
+case $1 in
+start)
+up
+;;
+stop)
+down $2 $3
+;;
+status)
+ss -antulp | grep redis
+;;
+*)
+connect
+;;
+esac
