@@ -1,0 +1,8 @@
+1.git提交时出现报错:
+	error: RPC failed; result=56, HTTP code = 0
+	fatal: The remote end hung up unexpectedly
+2.原因:
+	1) git push时,等待长时间后报错RPC failed; result=56, HTTP code = 200
+	2) git push时,有大文件存在(一般是超过10MB)
+3.解决方法
+	git config --global http.postBuffer 524288000
